@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOIDTRADER // SYSTEM BOOT</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Courier New',Courier,monospace; color:#00ff88; user-select:none; }
+#canvas { display:block; position:fixed; top:0; left:0; z-index:1; }
+#hud { position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:2; }
+.hud-panel { position:absolute; border:1px solid #00ff8844; background:#000d0588; padding:8px 12px; font-size:11px; line-height:1.75; letter-spacing:0.05em; color:#00ff88bb; backdrop-filter:blur(3px); }
+.hud-panel::before { content:attr(data-label); display:block; color:#00ff88; font-size:9px; letter-spacing:0.25em; border-bottom:1px solid #00ff8833; margin-bottom:5px; padding-bottom:3px; }
+#hud-nav   { top:10px; left:10px; width:198px; }
+#hud-ship  { top:10px; right:10px; width:198px; }
+#hud-cargo { bottom:10px; left:10px; width:215px; }
+#hud-log   { bottom:10px; left:235px; width:240px; }
+#radar-canvas { position:fixed; bottom:10px; left:50%; transform:translateX(-50%); z-index:20; pointer-events:none; }
+.bar-bg { display:inline-block; width:92px; height:7px; background:#002a0a; vertical-align:middle; border:1px solid #00ff8822; position:relative; overflow:hidden; }
+.bar-fill { position:absolute; top:0; left:0; height:100%; background:#00ff88; transition:width 0.25s; }
+.bar-fill.warn { background:#ffaa00; }
+.bar-fill.danger { background:#ff3333; }
+.val { color:#00ff88; font-weight:bold; }
+.dim { color:#00ff8855; }
+#crosshair { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; z-index:3; opacity:0.55; }
+#boot { position:fixed; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:200; }
+#boot h1 { font-size:30px; letter-spacing:0.45em; color:#00ff88; margin-bottom:6px; }
+#boot .sub { color:#00ff8855; font-size:11px; margin-bottom:28px; letter-spacing:0.3em; }
+.bl { color:#00ff8877; margin:2px 0; font-size:11px; }
+.bl.ok::before { content:'[OK]  '; color:#00ff88; }
+.bl.warn::before { content:'[WRN] '; color:#ffaa00; }
+#boot-start { margin-top:26px; border:1px solid #00ff88; background:transparent; color:#00ff88; font-family:'Courier New',monospace; font-size:13px; letter-spacing:0.2em; padding:10px 30px; cursor:pointer; }
+#boot-start:hover { background:#00ff8811; }
+#trade-modal { display:none; position:fixed; inset:0; background:#00000099; z-index:50; align-items:center; justify-content:center; }
+#trade-modal.open { display:flex; }
+#trade-box { border:1px solid #00ff88; background:#000d05f0; width:520px; padding:20px; font-size:12px; color:#00ff88bb; pointer-events:all; }
+#trade-box h2 { font-size:13px; letter-spacing:0.3em; color:#00ff88; margin-bottom:14px; }
+.trade-row { display:grid; grid-template-columns:100px 55px 75px 75px 70px 70px; gap:4px; align-items:center; margin-bottom:6px; font-size:11px; }
+.trade-row.header { color:#00ff8866; font-size:10px; letter-spacing:0.15em; border-bottom:1px solid #00ff8822; padding-bottom:4px; margin-bottom:8px; }
+.trade-btn { border:1px solid #00ff8844; background:transparent; color:#00ff88; font-family:'Courier New',monospace; font-size:10px; padding:3px 6px; cursor:pointer; letter-spacing:0.1em; }
+.trade-btn:hover { background:#00ff8811; }
+.trade-btn.sell { border-color:#ffaa0044; color:#ffaa00; }
+.trade-btn.sell:hover { background:#ffaa0011; }
+#trade-close { margin-top:16px; width:100%; border:1px solid #00ff8833; background:transparent; color:#00ff8877; font-family:'Courier New',monospace; font-size:11px; padding:7px; cursor:pointer; letter-spacing:0.2em; }
+#trade-close:hover { background:#00ff8808; }
+#distress-modal { display:none; position:fixed; inset:0; background:#00000099; z-index:50; align-items:center; justify-content:center; }
+#distress-modal.open { display:flex; }
+#distress-box { border:1px solid #ffaa00; background:#0d0800f0; width:400px; padding:22px; text-align:center; font-size:12px; color:#ffaa00bb; pointer-events:all; }
+#distress-box h2 { color:#ffaa00; font-size:14px; letter-spacing:0.3em; margin-bottom:10px; }
+#distress-box p { margin-bottom:14px; line-height:1.7; }
+.d-btn { border:1px solid #ffaa00; background:transparent; color:#ffaa00; font-family:'Courier New',monospace; font-size:12px; padding:8px 20px; cursor:pointer; letter-spacing:0.15em; margin:4px; }
+.d-btn:hover { background:#ffaa0011; }
+.d-btn.danger { border-color:#ff3333; color:#ff3333; }
+#death-screen { display:none; position:fixed; inset:0; background:#000; z-index:150; align-items:center; justify-content:center; flex-direction:column; }
+#death-screen.open { display:flex; }
+#death-screen h1 { color:#ff3333; font-size:36px; letter-spacing:0.5em; margin-bottom:14px; }
+#death-screen p { color:#ff333388; font-size:12px; letter-spacing:0.2em; margin-bottom:24px; }
+#death-screen button { border:1px solid #ff3333; background:transparent; color:#ff3333; font-family:'Courier New',monospace; font-size:13px; padding:10px 28px; cursor:pointer; letter-spacing:0.2em; }
+#death-screen button:hover { background:#ff333311; }
+#msg-overlay { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:13px; letter-spacing:0.25em; color:#ffaa00; pointer-events:none; z-index:30; opacity:0; transition:opacity 0.4s; text-align:center; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<canvas id="radar-canvas" width="200" height="200"></canvas>
+<div id="hud">
+  <div class="hud-panel" id="hud-nav" data-label="NAV · POSITION">
+    <div>X: <span class="val" id="hud-x">0</span></div>
+    <div>Y: <span class="val" id="hud-y">0</span></div>
+    <div>SPD: <span class="val" id="hud-spd">0.0</span> u/s</div>
+    <div>HDG: <span class="val" id="hud-hdg">0</span>°</div>
+    <div style="margin-top:6px">FUEL: <span class="bar-bg"><span class="bar-fill" id="bar-fuel" style="width:100%"></span></span> <span class="val" id="hud-fuel">100</span>%</div>
+  </div>
+  <div class="hud-panel" id="hud-ship" data-label="SHIP · STATUS">
+    <div>HULL: <span class="bar-bg"><span class="bar-fill" id="bar-hull" style="width:100%"></span></span> <span class="val" id="hud-hull">100</span>%</div>
+    <div style="margin-top:3px">ENGY: <span class="bar-bg"><span class="bar-fill" id="bar-energy" style="width:100%"></span></span> <span class="val" id="hud-energy">100</span>%</div>
+    <div style="margin-top:3px">HEAT: <span class="bar-bg"><span class="bar-fill warn" id="bar-heat" style="width:0%"></span></span> <span class="val" id="hud-heat">0</span>%</div>
+    <div style="margin-top:6px" class="dim">LASER: <span class="val" id="hud-laser">READY</span></div>
+    <div class="dim">KILLS: <span class="val" id="hud-kills">0</span></div>
+  </div>
+  <div class="hud-panel" id="hud-cargo" data-label="CARGO · MANIFEST">
+    <div>HOLD: <span class="val" id="hud-cargo-used">0</span>/50 units</div>
+    <div id="cargo-list" class="dim" style="margin-top:4px;font-size:10px">── EMPTY ──</div>
+    <div style="margin-top:8px">CREDITS: <span class="val" id="hud-credits">1,500</span> CR</div>
+  </div>
+  <div class="hud-panel" id="hud-log" data-label="SYSTEM · LOG">
+    <div id="log-lines" style="font-size:10px;line-height:1.8"></div>
+  </div>
+  <svg id="crosshair" width="30" height="30" viewBox="0 0 30 30">
+    <line x1="15" y1="0" x2="15" y2="11" stroke="#00ff88" stroke-width="1"/>
+    <line x1="15" y1="19" x2="15" y2="30" stroke="#00ff88" stroke-width="1"/>
+    <line x1="0" y1="15" x2="11" y2="15" stroke="#00ff88" stroke-width="1"/>
+    <line x1="19" y1="15" x2="30" y2="15" stroke="#00ff88" stroke-width="1"/>
+    <circle cx="15" cy="15" r="3" fill="none" stroke="#00ff88" stroke-width="1"/>
+  </svg>
+</div>
+<div id="trade-modal">
+  <div id="trade-box">
+    <h2 id="trade-title">DOCKING · STATION</h2>
+    <div class="trade-row header"><span>COMMODITY</span><span>STOCK</span><span>BUY/u</span><span>SELL/u</span><span>MY QTY</span><span></span></div>
+    <div id="trade-rows"></div>
+    <div style="margin-top:12px;font-size:10px;color:#00ff8866">
+      FUEL REFILL: <span id="fuel-cost-label">–</span>
+      <button class="trade-btn" id="btn-refuel" style="margin-left:8px">REFUEL</button>
+    </div>
+    <button id="trade-close">[ UNDOCK ]</button>
+  </div>
+</div>
+<div id="distress-modal">
+  <div id="distress-box">
+    <h2>⚠ FUEL DEPLETED</h2>
+    <p>Your drives are silent. You drift in the void.<br>Transmitting emergency beacon…<br><span style="color:#ff333388">Warning: signal attracts pirates.</span></p>
+    <button class="d-btn" id="btn-distress">SEND DISTRESS SIGNAL</button>
+    <button class="d-btn danger" id="btn-drift">DRIFT (risky)</button>
+  </div>
+</div>
+<div id="death-screen">
+  <h1>SHIP DESTROYED</h1>
+  <p>Respawning at HOME-STATION · 25% cargo jettisoned</p>
+  <button id="btn-respawn">[ RESPAWN ]</button>
+</div>
+<div id="msg-overlay"></div>
+<div id="boot">
+  <h1>VOIDTRADER</h1>
+  <div class="sub">DEEP SPACE COMMERCE &amp; COMBAT SYSTEM v1.1</div>
+  <div class="bl ok">KERNEL LOADED</div>
+  <div class="bl ok">CANVAS RENDERER READY</div>
+  <div class="bl ok">PROCEDURAL SEED ENGINE ONLINE</div>
+  <div class="bl ok">PHYSICS &amp; COMBAT SUBSYSTEM READY</div>
+  <div class="bl ok">TRADING MODULE ONLINE</div>
+  <div class="bl ok">METEORITE FIELD GENERATOR ONLINE</div>
+  <div class="bl ok">SAVE SYSTEM (localStorage) READY</div>
+  <button id="boot-start">[ LAUNCH SEQUENCE ]</button>
+</div>
+<script>
+// ═══════════════════════════════════════════════════
+//  VOIDTRADER v1.1 — Fuel rebalance + Meteority
+// ═══════════════════════════════════════════════════
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+const rcanvas=document.getElementById('radar-canvas'),rctx=rcanvas.getContext('2d');
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+window.addEventListener('resize',resize);resize();
+
+// PRNG
+function makePRNG(seed){
+  let s=seed>>>0;
+  return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+}
+const SEED=parseInt(localStorage.getItem('vt_seed'))||(Math.random()*0xFFFFFF|0);
+localStorage.setItem('vt_seed',SEED);
+
+// CONSTANTS
+// Chunk 8000 = stations much further apart, more travel between them
+const CHUNK=8000;
+const RADAR_R=90,RADAR_RANGE=6000,DOCK_RANGE=180,FUEL_MAX=100,STAR_COUNT=220;
+// Fuel burn: was 3.8/s, now 0.35/s — ~10x slower
+const FUEL_BURN=0.35;
+
+const cam={x:0,y:0};
+const wx=x=>canvas.width/2+(x-cam.x);
+const wy=y=>canvas.height/2+(y-cam.y);
+
+const keys={};
+let radarOn=true,controlsVisible=true;
+window.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='KeyM') radarOn=!radarOn;
+  if(e.code==='KeyH') controlsVisible=!controlsVisible;
+  if(e.code==='KeyE') tryDock();
+  e.preventDefault();
+});
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
+document.addEventListener('click',()=>{},true);
+
+function modalOpen(){
+  return document.getElementById('trade-modal').classList.contains('open')||
+         document.getElementById('distress-modal').classList.contains('open')||
+         document.getElementById('death-screen').classList.contains('open');
+}
+
+// STARS
+const starLayers=[0.06,0.18,0.45].map((par,li)=>{
+  const rng=makePRNG(SEED+li*777);
+  return Array.from({length:STAR_COUNT},()=>({nx:rng(),ny:rng(),size:rng()*(li===2?1.8:1.0)+0.3,alpha:rng()*0.55+0.25,par}));
+});
+function drawStars(){
+  for(const layer of starLayers)
+    for(const s of layer){
+      const ox=((s.nx*canvas.width-cam.x*s.par)%canvas.width+canvas.width)%canvas.width;
+      const oy=((s.ny*canvas.height-cam.y*s.par)%canvas.height+canvas.height)%canvas.height;
+      ctx.beginPath();ctx.arc(ox,oy,s.size,0,Math.PI*2);
+      ctx.fillStyle=`rgba(190,255,215,${s.alpha})`;ctx.fill();
+    }
+}
+
+// SHIP
+const ship={
+  x:0,y:0,vx:0,vy:0,angle:0,
+  thrust:260,maxSpeed:420,drag:0.976,rotSpeed:2.8,
+  fuel:FUEL_MAX,hull:100,energy:100,heat:0,
+  credits:1500,kills:0,
+  cargo:{},cargoMax:50,
+  laserCooldown:0,laserBeam:null,
+  isDead:false,invincible:0
+};
+const cargoTotal=()=>Object.values(ship.cargo).reduce((a,b)=>a+b,0);
+
+// STATIONS — chunk 8000, so stations are 6-10x further apart
+const NAMES=['ALPHA','BETA','GAMMA','DELTA','EPSILON','VEGA','SIRIUS','LYRA','CYGNUS','ORION','KEPLER','HAVEN','NEXUS','VOID','EDGE','DRIFT','NOVA','PULSAR','QUASAR','ZENITH'];
+const GOODS=['ORE','TECH','FOOD','MEDS','PARTS'];
+const GOODS_BASE={ORE:45,TECH:220,FOOD:8,MEDS:90,PARTS:130};
+const stationCache=new Map();
+
+function freshHome(){
+  return{x:0,y:-500,name:'HOME-STATION',radius:42,rotation:0,rotSpeed:0.1,isHome:true,discovered:true,
+    inv:{FUEL:{qty:999,price:12},ORE:{qty:80,price:40},TECH:{qty:30,price:200},FOOD:{qty:200,price:8},MEDS:{qty:60,price:85},PARTS:{qty:50,price:120}},
+    regenTimer:{}};
+}
+let homeStation=freshHome();
+
+function getStation(cx,cy){
+  const key=cx+','+cy;
+  if(!stationCache.has(key)){
+    const rng=makePRNG(SEED^(cx*73856093)^(cy*19349663));
+    // 30% chance of station per chunk (was 38%)
+    if(rng()>0.30){stationCache.set(key,null);return null;}
+    const nm=NAMES[Math.floor(rng()*NAMES.length)]+'-'+NAMES[Math.floor(rng()*NAMES.length)];
+    const inv={FUEL:{qty:Math.floor(rng()*120+40),price:Math.floor(rng()*20+12)}};
+    for(const g of GOODS){const v=rng()*0.6+0.7;inv[g]={qty:Math.floor(rng()*120+10),price:Math.floor(GOODS_BASE[g]*v)};}
+    stationCache.set(key,{
+      x:(cx+rng()*0.7+0.15)*CHUNK,y:(cy+rng()*0.7+0.15)*CHUNK,
+      name:nm,radius:28+rng()*14,rotation:0,rotSpeed:(rng()-0.5)*0.4,
+      inv,discovered:false,regenTimer:{}
+    });
+  }
+  return stationCache.get(key);
+}
+
+function visibleChunks(r){
+  const pcx=Math.floor(ship.x/CHUNK),pcy=Math.floor(ship.y/CHUNK),out=[];
+  for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++)out.push([pcx+dx,pcy+dy]);
+  return out;
+}
+function allNearby(){
+  const list=[homeStation];
+  for(const[cx,cy]of visibleChunks(3)){const s=getStation(cx,cy);if(s)list.push(s);}
+  return list;
+}
+function regenStations(dt){
+  for(const st of allNearby()){
+    for(const[good,data]of Object.entries(st.inv)){
+      const cap=good==='FUEL'&&st.isHome?999:160;
+      if(data.qty<cap){st.regenTimer[good]=(st.regenTimer[good]||0)+dt;if(st.regenTimer[good]>10){data.qty++;st.regenTimer[good]=0;}}
+    }
+    st.rotation+=st.rotSpeed*dt;
+  }
+}
+
+// DRAW STATION
+function drawStation(st){
+  if(!st)return;
+  const sx=wx(st.x),sy=wy(st.y),r=st.radius;
+  if(sx<-r-60||sx>canvas.width+r+60||sy<-r-60||sy>canvas.height+r+60)return;
+  const col=st.isHome?'#00ffff':'#00ff88';
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(st.rotation);
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.strokeStyle=col+'55';ctx.lineWidth=1.5;ctx.setLineDash([7,4]);ctx.stroke();ctx.setLineDash([]);
+  for(let i=0;i<4;i++){
+    const a=(i/4)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*r*0.3,Math.sin(a)*r*0.3);ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+    ctx.strokeStyle=col+'99';ctx.lineWidth=1.5;ctx.stroke();
+    const bx=Math.cos(a)*r,by=Math.sin(a)*r,px=Math.cos(a+Math.PI/2),py=Math.sin(a+Math.PI/2);
+    ctx.beginPath();ctx.moveTo(bx+px*5,by+py*5);ctx.lineTo(bx,by);ctx.lineTo(bx-px*5,by-py*5);
+    ctx.strokeStyle=col+'88';ctx.lineWidth=1;ctx.stroke();
+  }
+  ctx.beginPath();ctx.arc(0,0,r*0.28,0,Math.PI*2);ctx.fillStyle=col+'18';ctx.fill();ctx.strokeStyle=col+'cc';ctx.lineWidth=1;ctx.stroke();
+  ctx.restore();
+  ctx.font='9px Courier New';ctx.fillStyle=col+'aa';ctx.textAlign='center';ctx.fillText(st.name,sx,sy+r+14);
+  const dist=Math.hypot(ship.x-st.x,ship.y-st.y);
+  if(dist<DOCK_RANGE*3){
+    ctx.font='9px Courier New';ctx.fillStyle=dist<DOCK_RANGE?'#ffff00cc':'#ffaa0066';
+    ctx.fillText(dist<DOCK_RANGE?'[E] DOCK':Math.floor(dist)+' u',sx,sy+r+26);
+  }
+}
+
+// DRAW SHIP
+function drawShipAt(s,sx,sy,col,isPlayer){
+  col=col||'#00ff88';
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(s.angle);
+  if(isPlayer&&(keys['KeyW']||keys['ArrowUp'])&&s.fuel>0){
+    const f=0.7+Math.random()*0.3;
+    ctx.beginPath();ctx.moveTo(-6,14);ctx.lineTo(0,18+14*f);ctx.lineTo(6,14);
+    ctx.strokeStyle=`rgba(255,160,0,${0.65*f})`;ctx.lineWidth=1.5;ctx.stroke();
+  }
+  ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(9,10);ctx.lineTo(4,6);ctx.lineTo(0,14);ctx.lineTo(-4,6);ctx.lineTo(-9,10);ctx.closePath();
+  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.shadowColor=col;ctx.shadowBlur=isPlayer?7:4;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-3,-8);ctx.lineTo(0,-14);ctx.lineTo(3,-8);ctx.strokeStyle='#00ffcc';ctx.lineWidth=1;ctx.stroke();
+  if(isPlayer&&s.invincible>0){ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.strokeStyle=`rgba(0,200,255,${0.3+0.3*Math.sin(Date.now()*0.015)})`;ctx.lineWidth=2;ctx.stroke();}
+  ctx.shadowBlur=0;ctx.restore();
+}
+
+// LASER
+function lineCircle(x1,y1,x2,y2,cx,cy,cr){
+  const dx=x2-x1,dy=y2-y1,fx=x1-cx,fy=y1-cy;
+  const a=dx*dx+dy*dy,b=2*(fx*dx+fy*dy),c=fx*fx+fy*fy-cr*cr;
+  let d=b*b-4*a*c;if(d<0)return false;d=Math.sqrt(d);
+  const t1=(-b-d)/(2*a),t2=(-b+d)/(2*a);
+  return(t1>=0&&t1<=1)||(t2>=0&&t2<=1);
+}
+function fireLaser(){
+  if(ship.laserCooldown>0||ship.heat>=100||ship.energy<8||modalOpen())return;
+  ship.laserCooldown=0.18;ship.heat=Math.min(100,ship.heat+14);ship.energy=Math.max(0,ship.energy-6);
+  const nose=20,len=700;
+  const bx1=ship.x+Math.sin(ship.angle)*nose,by1=ship.y-Math.cos(ship.angle)*nose;
+  const bx2=ship.x+Math.sin(ship.angle)*(nose+len),by2=ship.y-Math.cos(ship.angle)*(nose+len);
+  ship.laserBeam={x1:bx1,y1:by1,x2:bx2,y2:by2,ttl:0.15};
+  for(const e of enemies){
+    if(e.dead)continue;
+    if(lineCircle(bx1,by1,bx2,by2,e.x,e.y,16)){e.hull-=35;if(e.hull<=0)killEnemy(e);}
+  }
+  // laser can also destroy meteors
+  for(const m of meteors){
+    if(m.dead)continue;
+    if(lineCircle(bx1,by1,bx2,by2,m.x,m.y,m.r)){splitMeteor(m);}
+  }
+}
+function drawLaser(){
+  if(!ship.laserBeam)return;
+  const age=1-(ship.laserBeam.ttl/0.15);const alpha=1-age*0.6;
+  ctx.beginPath();ctx.moveTo(wx(ship.laserBeam.x1),wy(ship.laserBeam.y1));ctx.lineTo(wx(ship.laserBeam.x2),wy(ship.laserBeam.y2));
+  ctx.strokeStyle=`rgba(255,80,30,${alpha*0.35})`;ctx.lineWidth=8;ctx.shadowColor='#ff5020';ctx.shadowBlur=22;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(wx(ship.laserBeam.x1),wy(ship.laserBeam.y1));ctx.lineTo(wx(ship.laserBeam.x2),wy(ship.laserBeam.y2));
+  ctx.strokeStyle=`rgba(255,210,160,${alpha})`;ctx.lineWidth=2;ctx.shadowColor='#ff8844';ctx.shadowBlur=8;ctx.stroke();
+  ctx.shadowBlur=0;
+}
+
+// ══════════════════════════════════════════════════
+//  METEORITY — the new obstacle system
+// ══════════════════════════════════════════════════
+const meteors=[];
+let meteorTimer=0;
+
+function spawnMeteor(){
+  // spawn off-screen in direction of travel
+  const angle=Math.random()*Math.PI*2;
+  const dist=800+Math.random()*600;
+  const r=18+Math.random()*28; // radius 18-46
+  const speed=40+Math.random()*80;
+  const ma=Math.random()*Math.PI*2; // travel direction
+  // generate jagged polygon points
+  const pts=[];
+  const sides=6+Math.floor(Math.random()*5);
+  for(let i=0;i<sides;i++){
+    const a=(i/sides)*Math.PI*2;
+    const rr=r*(0.6+Math.random()*0.5);
+    pts.push({x:Math.cos(a)*rr,y:Math.sin(a)*rr});
+  }
+  meteors.push({
+    x:ship.x+Math.cos(angle)*dist,
+    y:ship.y+Math.sin(angle)*dist,
+    vx:Math.cos(ma)*speed,vy:Math.sin(ma)*speed,
+    r,pts,rotation:0,rotSpeed:(Math.random()-0.5)*1.2,
+    dead:false,generation:0
+  });
+}
+
+function splitMeteor(m){
+  m.dead=true;
+  if(m.generation>=2)return; // max 2 splits
+  // split into 2-3 smaller pieces
+  const count=2+Math.floor(Math.random()*2);
+  for(let i=0;i<count;i++){
+    const nr=m.r*0.5;
+    if(nr<8)return;
+    const a=Math.random()*Math.PI*2;
+    const spd=60+Math.random()*60;
+    const pts=[];
+    const sides=5+Math.floor(Math.random()*4);
+    for(let j=0;j<sides;j++){
+      const ang=(j/sides)*Math.PI*2;
+      const rr=nr*(0.55+Math.random()*0.5);
+      pts.push({x:Math.cos(ang)*rr,y:Math.sin(ang)*rr});
+    }
+    meteors.push({
+      x:m.x+(Math.random()-0.5)*60,y:m.y+(Math.random()-0.5)*60,
+      vx:m.vx*0.5+Math.cos(a)*spd,vy:m.vy*0.5+Math.sin(a)*spd,
+      r:nr,pts,rotation:0,rotSpeed:(Math.random()-0.5)*2,
+      dead:false,generation:m.generation+1
+    });
+  }
+  addLog('Meteor destroyed');
+}
+
+function updateMeteors(dt){
+  meteorTimer+=dt;
+  // spawn every 8-15s, more meteors further from home
+  const spawnInterval=8+Math.random()*7;
+  if(meteorTimer>spawnInterval){
+    meteorTimer=0;
+    const count=1+Math.floor(Math.random()*2); // 1-2 at a time
+    for(let i=0;i<count;i++) spawnMeteor();
+  }
+
+  for(const m of meteors){
+    if(m.dead)continue;
+    // despawn if very far
+    if(Math.hypot(m.x-ship.x,m.y-ship.y)>3000){m.dead=true;continue;}
+    m.x+=m.vx*dt;m.y+=m.vy*dt;
+    m.rotation+=m.rotSpeed*dt;
+    // collision with player
+    if(ship.invincible<=0&&Math.hypot(m.x-ship.x,m.y-ship.y)<m.r+14){
+      const dmg=10+Math.floor(m.r*0.8); // bigger meteor = more damage
+      ship.hull=Math.max(0,ship.hull-dmg);
+      addLog('Meteor impact! -'+dmg+' hull');
+      // bounce ship
+      const dx=ship.x-m.x,dy=ship.y-m.y,d=Math.hypot(dx,dy)||1;
+      ship.vx+=(dx/d)*120;ship.vy+=(dy/d)*120;
+      ship.invincible=1.2; // brief invincibility
+      splitMeteor(m);
+      if(ship.hull<=0)killShip();
+    }
+  }
+  for(let i=meteors.length-1;i>=0;i--)if(meteors[i].dead)meteors.splice(i,1);
+}
+
+function drawMeteors(){
+  for(const m of meteors){
+    if(m.dead)continue;
+    const sx=wx(m.x),sy=wy(m.y);
+    if(sx<-100||sx>canvas.width+100||sy<-100||sy>canvas.height+100)continue;
+    ctx.save();ctx.translate(sx,sy);ctx.rotate(m.rotation);
+    ctx.beginPath();
+    ctx.moveTo(m.pts[0].x,m.pts[0].y);
+    for(let i=1;i<m.pts.length;i++)ctx.lineTo(m.pts[i].x,m.pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle='rgba(80,60,40,0.7)';ctx.fill();
+    ctx.strokeStyle='rgba(180,140,80,0.8)';ctx.lineWidth=1;ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ENEMIES
+const enemies=[];let spawnTimer=0;
+function spawnEnemy(){
+  const a=Math.random()*Math.PI*2,d=900+Math.random()*700;
+  enemies.push({x:ship.x+Math.cos(a)*d,y:ship.y+Math.sin(a)*d,vx:0,vy:0,angle:0,
+    hull:70,maxSpeed:260,thrust:190,rotSpeed:1.8,dead:false,laserTimer:0,
+    laserCooldown:2.5+Math.random()*2,laserBeam:null});
+}
+function killEnemy(e){
+  e.dead=true;ship.kills++;addLog('Pirate destroyed');
+  const g=GOODS[Math.floor(Math.random()*GOODS.length)],q=Math.floor(Math.random()*8+3);
+  drops.push({x:e.x,y:e.y,good:g,qty:q,ttl:6000,isSignal:false});
+}
+function updateEnemies(dt){
+  spawnTimer+=dt;
+  if(spawnTimer>30){spawnTimer=0;if(enemies.filter(e=>!e.dead).length<3)spawnEnemy();}
+  for(const e of enemies){
+    if(e.dead)continue;
+    if(Math.hypot(e.x-ship.x,e.y-ship.y)>6000){e.dead=true;continue;}
+    const dx=ship.x-e.x,dy=ship.y-e.y,dist=Math.hypot(dx,dy);
+    const target=Math.atan2(dx,-dy);let da=target-e.angle;
+    while(da>Math.PI)da-=Math.PI*2;while(da<-Math.PI)da+=Math.PI*2;
+    e.angle+=Math.sign(da)*Math.min(Math.abs(da),e.rotSpeed*dt);
+    if(dist>220){e.vx+=Math.sin(e.angle)*e.thrust*dt;e.vy-=Math.cos(e.angle)*e.thrust*dt;}
+    const spd=Math.hypot(e.vx,e.vy);
+    if(spd>e.maxSpeed){e.vx=(e.vx/spd)*e.maxSpeed;e.vy=(e.vy/spd)*e.maxSpeed;}
+    e.vx*=Math.pow(0.975,dt*60);e.vy*=Math.pow(0.975,dt*60);
+    e.x+=e.vx*dt;e.y+=e.vy*dt;
+    e.laserTimer+=dt;
+    if(e.laserTimer>e.laserCooldown&&dist<520){
+      e.laserTimer=0;
+      const nose=18,len=540;
+      e.laserBeam={x1:e.x+Math.sin(e.angle)*nose,y1:e.y-Math.cos(e.angle)*nose,
+        x2:e.x+Math.sin(e.angle)*(nose+len),y2:e.y-Math.cos(e.angle)*(nose+len),ttl:0.12};
+      if(ship.invincible<=0&&lineCircle(e.laserBeam.x1,e.laserBeam.y1,e.laserBeam.x2,e.laserBeam.y2,ship.x,ship.y,16)){
+        ship.hull=Math.max(0,ship.hull-18);addLog('Hull hit! '+Math.floor(ship.hull)+'%');if(ship.hull<=0)killShip();
+      }
+    }
+    if(e.laserBeam){e.laserBeam.ttl-=dt;if(e.laserBeam.ttl<=0)e.laserBeam=null;}
+    if(dist<24&&ship.invincible<=0){ship.hull=Math.max(0,ship.hull-10);e.hull-=50;if(e.hull<=0)killEnemy(e);if(ship.hull<=0)killShip();}
+  }
+  for(let i=enemies.length-1;i>=0;i--)if(enemies[i].dead&&!enemies[i].laserBeam)enemies.splice(i,1);
+}
+function drawEnemies(){
+  for(const e of enemies){
+    if(e.dead)continue;
+    drawShipAt(e,wx(e.x),wy(e.y),'#ff4422',false);
+    if(e.laserBeam){
+      ctx.beginPath();ctx.moveTo(wx(e.laserBeam.x1),wy(e.laserBeam.y1));ctx.lineTo(wx(e.laserBeam.x2),wy(e.laserBeam.y2));
+      ctx.strokeStyle='#ff4422';ctx.lineWidth=1.5;ctx.shadowColor='#ff4422';ctx.shadowBlur=10;ctx.stroke();ctx.shadowBlur=0;
+    }
+    const sx=wx(e.x),sy=wy(e.y);
+    ctx.fillStyle='#ff442233';ctx.fillRect(sx-18,sy-30,36,5);
+    ctx.fillStyle='#ff4422';ctx.fillRect(sx-18,sy-30,(e.hull/70)*36,5);
+  }
+}
+
+// DROPS
+const drops=[];
+function drawDrops(){
+  const pulse=0.5+0.5*Math.sin(Date.now()*0.004);
+  for(const d of drops){
+    if(d.ttl<=0)continue;
+    const sx=wx(d.x),sy=wy(d.y);
+    ctx.beginPath();ctx.arc(sx,sy,6,0,Math.PI*2);
+    ctx.strokeStyle=d.isSignal?`rgba(255,200,0,${0.5+0.5*pulse})`:`rgba(0,255,136,${0.4+0.4*pulse})`;
+    ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle=d.isSignal?'#ffcc0022':'#00ff8815';ctx.fill();
+    ctx.font='8px Courier New';ctx.textAlign='center';
+    ctx.fillStyle=d.isSignal?'#ffcc00aa':'#00ff88aa';
+    ctx.fillText(d.qty+'x'+d.good,sx,sy-10);
+    if(Math.hypot(ship.x-d.x,ship.y-d.y)<55)collectDrop(d);
+  }
+  for(let i=drops.length-1;i>=0;i--){drops[i].ttl--;if(drops[i].ttl<=0)drops.splice(i,1);}
+}
+function collectDrop(d){
+  d.ttl=0;
+  const space=ship.cargoMax-cargoTotal(),take=Math.min(d.qty,space);
+  if(take<=0){addLog('Hold full!');return;}
+  ship.cargo[d.good]=(ship.cargo[d.good]||0)+take;
+  addLog('Collected '+take+'x '+d.good);
+}
+
+// DEATH
+function killShip(){
+  if(ship.isDead)return;
+  ship.isDead=true;
+  for(const[g,q]of Object.entries(ship.cargo)){
+    const loss=Math.ceil(q*0.25);ship.cargo[g]=q-loss;
+    if(ship.cargo[g]<=0)delete ship.cargo[g];
+    if(loss>0)drops.push({x:ship.x+(Math.random()-0.5)*200,y:ship.y+(Math.random()-0.5)*200,good:g,qty:loss,ttl:8000,isSignal:true});
+  }
+  document.getElementById('death-screen').classList.add('open');
+}
+document.getElementById('btn-respawn').addEventListener('click',()=>{
+  ship.isDead=false;ship.hull=50;ship.fuel=60;ship.energy=100;ship.heat=0;
+  ship.x=0;ship.y=-500;ship.vx=0;ship.vy=0;ship.angle=0;ship.invincible=5;
+  enemies.length=0;spawnTimer=0;meteors.length=0;
+  document.getElementById('death-screen').classList.remove('open');
+  addLog('Respawned · hull 50% · fuel 60%');
+});
+
+// DISTRESS
+let distressSent=false;
+function checkFuel(){if(ship.fuel>0||distressSent||modalOpen())return;distressSent=true;document.getElementById('distress-modal').classList.add('open');}
+document.getElementById('btn-distress').addEventListener('click',()=>{
+  document.getElementById('distress-modal').classList.remove('open');
+  addLog('Distress signal sent · pirates inbound');
+  spawnEnemy();spawnEnemy();
+  setTimeout(()=>{ship.fuel=40;distressSent=false;addLog('Rescue ship delivered fuel');},14000);
+});
+document.getElementById('btn-drift').addEventListener('click',()=>{
+  document.getElementById('distress-modal').classList.remove('open');distressSent=false;addLog('Drifting silent…');
+});
+
+// TRADING
+let dockedSt=null;
+function tryDock(){
+  if(modalOpen())return;
+  for(const st of allNearby()){
+    if(!st||!st.discovered)continue;
+    if(Math.hypot(ship.x-st.x,ship.y-st.y)<DOCK_RANGE){openTrade(st);return;}
+  }
+}
+function openTrade(st){
+  dockedSt=st;ship.vx=0;ship.vy=0;
+  document.getElementById('trade-title').textContent='DOCKING · '+st.name;
+  buildRows(st);updateFuelLabel(st);
+  document.getElementById('trade-modal').classList.add('open');
+}
+function updateFuelLabel(st){
+  const needed=FUEL_MAX-ship.fuel,cost=Math.ceil(needed*st.inv.FUEL.price);
+  document.getElementById('fuel-cost-label').textContent=needed<0.5?'FULL':'~'+cost+' CR ('+Math.floor(needed)+' units)';
+}
+function buildRows(st){
+  const c=document.getElementById('trade-rows');c.innerHTML='';
+  for(const[good,data]of Object.entries(st.inv)){
+    if(good==='FUEL')continue;
+    const myQ=ship.cargo[good]||0,sellP=Math.floor(data.price*0.8);
+    const row=document.createElement('div');row.className='trade-row';
+    row.innerHTML=`<span>${good}</span><span>${data.qty}</span><span>${data.price}</span><span>${sellP}</span><span>${myQ}</span>`+
+      `<span><button class="trade-btn" onclick="doBuy('${good}')">BUY</button> <button class="trade-btn sell" onclick="doSell('${good}')">SELL</button></span>`;
+    c.appendChild(row);
+  }
+}
+window.doBuy=function(good){
+  const st=dockedSt;if(!st)return;const d=st.inv[good];
+  if(d.qty<=0){showMsg('OUT OF STOCK');return;}
+  if(ship.credits<d.price){showMsg('INSUFFICIENT CREDITS');return;}
+  if(cargoTotal()>=ship.cargoMax){showMsg('HOLD FULL');return;}
+  ship.credits-=d.price;d.qty--;ship.cargo[good]=(ship.cargo[good]||0)+1;buildRows(st);updateHUD();
+};
+window.doSell=function(good){
+  const st=dockedSt;if(!st)return;const myQ=ship.cargo[good]||0;
+  if(myQ<=0){showMsg('NOTHING TO SELL');return;}
+  const p=Math.floor(st.inv[good].price*0.8);
+  ship.credits+=p;st.inv[good].qty++;ship.cargo[good]--;
+  if(!ship.cargo[good])delete ship.cargo[good];buildRows(st);updateHUD();
+};
+document.getElementById('btn-refuel').addEventListener('click',()=>{
+  const st=dockedSt;if(!st)return;
+  const needed=FUEL_MAX-ship.fuel;if(needed<0.5){showMsg('ALREADY FULL');return;}
+  const cost=Math.ceil(needed*st.inv.FUEL.price);
+  if(ship.credits<cost){showMsg('INSUFFICIENT CREDITS');return;}
+  ship.credits-=cost;ship.fuel=FUEL_MAX;distressSent=false;
+  updateFuelLabel(st);addLog('Refuelled · '+cost+' CR');updateHUD();
+});
+document.getElementById('trade-close').addEventListener('click',()=>{
+  document.getElementById('trade-modal').classList.remove('open');dockedSt=null;addLog('Undocked');
+});
+
+// RADAR
+function drawRadar(){
+  rctx.clearRect(0,0,200,200);if(!radarOn)return;
+  const cx=100,cy=100;
+  rctx.beginPath();rctx.arc(cx,cy,RADAR_R,0,Math.PI*2);rctx.fillStyle='#00060288';rctx.fill();
+  rctx.strokeStyle='#00ff8877';rctx.lineWidth=1.5;rctx.stroke();
+  rctx.setLineDash([3,5]);
+  for(const f of[0.33,0.66]){rctx.beginPath();rctx.arc(cx,cy,RADAR_R*f,0,Math.PI*2);rctx.strokeStyle='#00ff8822';rctx.lineWidth=0.5;rctx.stroke();}
+  rctx.setLineDash([]);
+  for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;rctx.beginPath();rctx.moveTo(cx+Math.cos(a)*RADAR_R*0.87,cy+Math.sin(a)*RADAR_R*0.87);rctx.lineTo(cx+Math.cos(a)*(RADAR_R-1),cy+Math.sin(a)*(RADAR_R-1));rctx.strokeStyle='#00ff8844';rctx.lineWidth=1;rctx.stroke();}
+  rctx.save();rctx.beginPath();rctx.arc(cx,cy,RADAR_R-1,0,Math.PI*2);rctx.clip();
+  const sweep=(Date.now()/2200)%(Math.PI*2);
+  rctx.beginPath();rctx.moveTo(cx,cy);rctx.arc(cx,cy,RADAR_R,sweep,sweep+1.2);rctx.closePath();rctx.fillStyle='#00ff8812';rctx.fill();
+  rctx.beginPath();rctx.moveTo(cx,cy);rctx.lineTo(cx+Math.cos(sweep)*RADAR_R,cy+Math.sin(sweep)*RADAR_R);rctx.strokeStyle='#00ff8866';rctx.lineWidth=1;rctx.stroke();rctx.restore();
+  // stations
+  for(const st of allNearby()){
+    if(!st||!st.discovered)continue;
+    const dx=st.x-ship.x,dy=st.y-ship.y,dist=Math.hypot(dx,dy);if(dist>RADAR_RANGE)continue;
+    const bx=cx+(dx/RADAR_RANGE)*RADAR_R,by=cy+(dy/RADAR_RANGE)*RADAR_R;
+    rctx.beginPath();rctx.arc(bx,by,3,0,Math.PI*2);rctx.fillStyle=st.isHome?'#00ffff':'#00ff88';rctx.fill();
+  }
+  // enemies
+  for(const e of enemies){
+    if(e.dead)continue;
+    const dx=e.x-ship.x,dy=e.y-ship.y,dist=Math.hypot(dx,dy);if(dist>RADAR_RANGE)continue;
+    const bx=cx+(dx/RADAR_RANGE)*RADAR_R,by=cy+(dy/RADAR_RANGE)*RADAR_R;
+    rctx.beginPath();rctx.arc(bx,by,2.5,0,Math.PI*2);rctx.fillStyle='#ff4422';rctx.fill();
+  }
+  // meteors on radar (orange blips)
+  for(const m of meteors){
+    if(m.dead)continue;
+    const dx=m.x-ship.x,dy=m.y-ship.y,dist=Math.hypot(dx,dy);if(dist>RADAR_RANGE)continue;
+    const bx=cx+(dx/RADAR_RANGE)*RADAR_R,by=cy+(dy/RADAR_RANGE)*RADAR_R;
+    rctx.beginPath();rctx.arc(bx,by,1.5,0,Math.PI*2);rctx.fillStyle='#ff8800';rctx.fill();
+  }
+  // drops
+  for(const d of drops){
+    if(d.ttl<=0)continue;
+    const dx=d.x-ship.x,dy=d.y-ship.y,dist=Math.hypot(dx,dy);if(dist>RADAR_RANGE)continue;
+    const bx=cx+(dx/RADAR_RANGE)*RADAR_R,by=cy+(dy/RADAR_RANGE)*RADAR_R;
+    rctx.beginPath();rctx.arc(bx,by,2,0,Math.PI*2);rctx.fillStyle=d.isSignal?'#ffcc00':'#00ffcc';rctx.fill();
+  }
+  // player
+  rctx.beginPath();rctx.arc(cx,cy,3,0,Math.PI*2);rctx.fillStyle='#fff';rctx.fill();
+  rctx.beginPath();rctx.moveTo(cx,cy);rctx.lineTo(cx+Math.sin(ship.angle)*9,cy-Math.cos(ship.angle)*9);rctx.strokeStyle='#ffffff88';rctx.lineWidth=1.5;rctx.stroke();
+  rctx.font='8px Courier New';rctx.textAlign='center';rctx.fillStyle='#00ff8844';rctx.fillText('RADAR  [M]',cx,cy+RADAR_R+13);
+}
+
+// PHYSICS
+function updateShip(dt){
+  if(ship.isDead||modalOpen())return;
+  if(keys['KeyA']||keys['ArrowLeft'])  ship.angle-=ship.rotSpeed*dt;
+  if(keys['KeyD']||keys['ArrowRight']) ship.angle+=ship.rotSpeed*dt;
+  const thrusting=(keys['KeyW']||keys['ArrowUp'])&&ship.fuel>0;
+  if(thrusting){
+    ship.vx+=Math.sin(ship.angle)*ship.thrust*dt;
+    ship.vy-=Math.cos(ship.angle)*ship.thrust*dt;
+    // FUEL BURN — 10x slower than before (was 3.8, now 0.35)
+    ship.fuel=Math.max(0,ship.fuel-FUEL_BURN*dt);
+  }
+  if(keys['KeyS']||keys['ArrowDown']){ship.vx*=Math.pow(0.90,dt*60);ship.vy*=Math.pow(0.90,dt*60);}
+  if(keys['Space'])fireLaser();
+  const spd=Math.hypot(ship.vx,ship.vy);
+  if(spd>ship.maxSpeed){ship.vx=(ship.vx/spd)*ship.maxSpeed;ship.vy=(ship.vy/spd)*ship.maxSpeed;}
+  ship.vx*=Math.pow(ship.drag,dt*60);ship.vy*=Math.pow(ship.drag,dt*60);
+  ship.x+=ship.vx*dt;ship.y+=ship.vy*dt;
+  cam.x=ship.x;cam.y=ship.y;
+  if(ship.laserCooldown>0)ship.laserCooldown-=dt;
+  if(ship.laserBeam){ship.laserBeam.ttl-=dt;if(ship.laserBeam.ttl<=0)ship.laserBeam=null;}
+  ship.heat=Math.max(0,ship.heat-16*dt);
+  ship.energy=Math.min(100,ship.energy+14*dt);
+  if(ship.heat>=100)ship.laserCooldown=Math.max(ship.laserCooldown,2.2);
+  if(ship.invincible>0)ship.invincible-=dt;
+  for(const[cx,cy]of visibleChunks(2)){
+    const st=getStation(cx,cy);
+    if(st&&!st.discovered&&Math.hypot(ship.x-st.x,ship.y-st.y)<RADAR_RANGE*0.6){
+      st.discovered=true;addLog('Station found: '+st.name);
+    }
+  }
+  checkFuel();
+}
+
+// HUD
+const logLines=[];
+function addLog(msg){logLines.push(msg);if(logLines.length>7)logLines.shift();document.getElementById('log-lines').innerHTML=logLines.map(l=>`<div class="dim">» ${l}</div>`).join('');}
+function updateHUD(){
+  const spd=Math.hypot(ship.vx,ship.vy),deg=((ship.angle*180/Math.PI)%360+360)%360;
+  document.getElementById('hud-x').textContent=Math.floor(ship.x);
+  document.getElementById('hud-y').textContent=Math.floor(ship.y);
+  document.getElementById('hud-spd').textContent=spd.toFixed(1);
+  document.getElementById('hud-hdg').textContent=Math.floor(deg);
+  document.getElementById('hud-fuel').textContent=Math.floor(ship.fuel);
+  document.getElementById('hud-hull').textContent=Math.floor(ship.hull);
+  document.getElementById('hud-energy').textContent=Math.floor(ship.energy);
+  document.getElementById('hud-heat').textContent=Math.floor(ship.heat);
+  document.getElementById('hud-kills').textContent=ship.kills;
+  document.getElementById('bar-fuel').style.width=ship.fuel+'%';
+  document.getElementById('bar-hull').style.width=ship.hull+'%';
+  document.getElementById('bar-energy').style.width=ship.energy+'%';
+  document.getElementById('bar-heat').style.width=ship.heat+'%';
+  document.getElementById('bar-fuel').className='bar-fill'+(ship.fuel<20?' danger':ship.fuel<40?' warn':'');
+  document.getElementById('bar-hull').className='bar-fill'+(ship.hull<25?' danger':ship.hull<50?' warn':'');
+  document.getElementById('bar-heat').className='bar-fill'+(ship.heat>80?' danger':ship.heat>50?' warn':'');
+  document.getElementById('hud-laser').textContent=ship.heat>=100?'OVERHEAT':ship.laserCooldown>0?'CHARGE':'READY';
+  document.getElementById('hud-credits').textContent=ship.credits.toLocaleString();
+  document.getElementById('hud-cargo-used').textContent=cargoTotal();
+  const list=Object.entries(ship.cargo).filter(([,q])=>q>0);
+  document.getElementById('cargo-list').innerHTML=list.length?list.map(([g,q])=>`${q}x ${g}`).join('<br>'):'── EMPTY ──';
+}
+
+// SAVE/LOAD
+function saveGame(){localStorage.setItem('vt_save',JSON.stringify({x:ship.x,y:ship.y,vx:ship.vx,vy:ship.vy,angle:ship.angle,fuel:ship.fuel,hull:ship.hull,credits:ship.credits,kills:ship.kills,cargo:ship.cargo,seed:SEED}));}
+function loadGame(){
+  const raw=localStorage.getItem('vt_save');if(!raw)return;
+  try{const s=JSON.parse(raw);if(s.seed!==SEED)return;
+    Object.assign(ship,{x:s.x,y:s.y,vx:s.vx||0,vy:s.vy||0,angle:s.angle||0,fuel:s.fuel,hull:s.hull,credits:s.credits,kills:s.kills||0,cargo:s.cargo||{}});
+  }catch(e){}
+}
+setInterval(saveGame,30000);
+
+// MISC
+function showMsg(t,d=1800){const el=document.getElementById('msg-overlay');el.textContent=t;el.style.opacity=1;clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity=0,d);}
+function drawGrid(){
+  const g=500,ox=(((-cam.x%g)+g)%g),oy=(((-cam.y%g)+g)%g);
+  ctx.strokeStyle='#00ff8806';ctx.lineWidth=0.5;
+  for(let x=ox;x<canvas.width;x+=g){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for(let y=oy;y<canvas.height;y+=g){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+}
+function drawVelVec(){
+  const spd=Math.hypot(ship.vx,ship.vy);if(spd<5)return;
+  const sx=wx(ship.x),sy=wy(ship.y),len=Math.min(spd*0.14,55);
+  ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+(ship.vx/spd)*len,sy+(ship.vy/spd)*len);
+  ctx.strokeStyle='#ffaa0055';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.stroke();ctx.setLineDash([]);
+}
+function drawControls(){
+  if(!controlsVisible)return;
+  const x=canvas.width/2,y=canvas.height-58;
+  const controls=[{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser (hold)'},{k:'E',d:'Dock'},{k:'M',d:'Radar'},{k:'H',d:'Hide'}];
+  const col_w=120,total=controls.length*col_w,startX=x-total/2;
+  ctx.font='9px Courier New';ctx.textAlign='left';
+  controls.forEach((c,i)=>{const cx=startX+i*col_w;ctx.fillStyle='#00ff8888';ctx.fillText('['+c.k+']',cx,y);ctx.fillStyle='#00ff8844';ctx.fillText(c.d,cx,y+13);});
+}
+function drawScanlines(){ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=1;for(let y=0;y<canvas.height;y+=4){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}}
+
+// MAIN LOOP
+let lastTime=0;
+function loop(ts){
+  const dt=Math.min((ts-lastTime)/1000,0.05);lastTime=ts;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#000408';ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawStars();drawGrid();
+  drawStation(homeStation);
+  for(const[cx,cy]of visibleChunks(2)){const st=getStation(cx,cy);if(st&&st.discovered)drawStation(st);}
+  drawMeteors();drawDrops();drawEnemies();drawVelVec();drawLaser();
+  drawShipAt(ship,wx(ship.x),wy(ship.y),'#00ff88',true);
+  drawScanlines();drawControls();
+  drawRadar();
+  updateShip(dt);updateEnemies(dt);updateMeteors(dt);regenStations(dt);updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// BOOT
+document.getElementById('boot-start').addEventListener('click',()=>{
+  loadGame();
+  document.getElementById('boot').style.display='none';
+  addLog('System online · SEED:'+SEED.toString(16).toUpperCase());
+  addLog('WASD: thrust  A/D: rotate');
+  addLog('SPACE (hold): laser  E: dock');
+  addLog('Beware: meteorite fields ahead');
+  addLog('HOME-STATION nearby — press E');
+  setTimeout(()=>{spawnEnemy();addLog('WARNING: pirate detected');},8000);
+  requestAnimationFrame(ts=>{lastTime=ts;requestAnimationFrame(loop);});
+});
+</script>
+</body>
+</html>
