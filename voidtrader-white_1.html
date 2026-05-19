@@ -686,8 +686,9 @@ const GOODS_BASE={ORE:45,TECH:220,FOOD:8,MEDS:90,PARTS:130};
 const stCache=new Map(),discovered=new Set();
 
 function freshHome(){
-  return{x:0,y:-500,name:'HOME-STATION',radius:42,rotation:0,rotSpeed:.1,
+  return{x:0,y:-500,name:'HOME-STATION',radius:660,rotation:0,rotSpeed:.1,
     isHome:true,discovered:true,
+    platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
     inv:{FUEL:{qty:999,price:12},ORE:{qty:80,price:40},TECH:{qty:30,price:200},FOOD:{qty:200,price:8},MEDS:{qty:60,price:85},PARTS:{qty:50,price:120}},
     regenTimer:{}};
 }
@@ -704,7 +705,8 @@ function getStation(cx,cy){
     const isBounty=rng()<.15;
     if(isBounty)inv['ALIEN-TECH']={qty:0,price:1200};
     stCache.set(key,{x:(cx+rng()*.7+.15)*CHUNK,y:(cy+rng()*.7+.15)*CHUNK,
-      name:nm,radius:28+rng()*14,rotation:0,rotSpeed:(rng()-.5)*.4,
+      name:nm,radius:360+rng()*240,rotation:0,rotSpeed:(rng()-.5)*.4,
+      platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
       inv,discovered:false,isBounty,key,regenTimer:{}});
   }
   return stCache.get(key);
@@ -723,22 +725,47 @@ function regenStations(dt){
   }
 }
 
-// ═══ DRAW STATION — ED white vector style ═══
+// ═══ DRAW SYSTEM (STAR + PLANETS + STATION) ═══
 function drawStation(st){
   if(!st)return;
   const sx=wx(st.x),sy=wy(st.y),r=st.radius;
-  if(sx<-r-80||sx>canvas.width+r+80||sy<-r-80||sy>canvas.height+r+80)return;
+  if(sx<-1000||sx>canvas.width+1000||sy<-1000||sy>canvas.height+1000)return;
 
-  const distSh=Math.hypot(ship.x-st.x,ship.y-st.y);
+  ctx.save();ctx.translate(sx,sy);
 
-  ctx.save();ctx.translate(sx,sy);ctx.rotate(st.rotation);
+  // Vykreslení centrální hvězdy
+  if(!st.isHome && !st.isBounty) {
+      ctx.beginPath();ctx.arc(0,0,r*3,0,Math.PI*2);
+      ctx.fillStyle=wa(pal.warn,.1);ctx.fill();
+      ctx.strokeStyle=wa(pal.warn,.5);ctx.lineWidth=2;ctx.stroke();
+      ctx.font='10px Orbitron';ctx.fillStyle=wa(pal.w,.6);ctx.textAlign='center';
+      ctx.fillText('STAR: '+st.name.split('-')[0], 0, r*3 + 15);
+  }
 
-  // Outer dashed orbit ring
+  ctx.rotate(st.rotation);
+
+  // Planeta obíhající hvězdu (stanice je u ní)
+  const orbitDist = !st.isHome && !st.isBounty ? r*8 : 0;
+  if(!st.isHome && !st.isBounty) {
+      ctx.beginPath();ctx.arc(0,0,orbitDist,0,Math.PI*2);
+      ctx.strokeStyle=wa(pal.w,.05);ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // Posun ke stanici/planetě
+  if(!st.isHome && !st.isBounty) {
+      ctx.translate(orbitDist, 0);
+      // Vykreslení planety
+      ctx.beginPath();ctx.arc(0,0,r*1.5,0,Math.PI*2);
+      ctx.fillStyle=wa(pal.w,.08);ctx.fill();
+      ctx.strokeStyle=wa(pal.w,.4);ctx.lineWidth=1.5;ctx.stroke();
+  }
+
+  // Vykreslení samotné stanice (Hexagon a ramena)
+  ctx.rotate(st.rotation * 2);
   ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);
   ctx.strokeStyle=wa(pal.w,.15);ctx.lineWidth=.8;
   ctx.setLineDash([5,7]);ctx.stroke();ctx.setLineDash([]);
 
-  // Docking arms (4-way)
   for(let i=0;i<4;i++){
     const a=(i/4)*Math.PI*2;
     const c=Math.cos(a),s=Math.sin(a);
@@ -761,6 +788,39 @@ function drawStation(st){
   ctx.closePath();
   ctx.fillStyle=wa(pal.w,.04);ctx.fill();
   ctx.strokeStyle=wa(pal.w,.8);ctx.lineWidth=1.2;ctx.stroke();
+
+  if(st.platforms) {
+    for(const p of st.platforms) {
+      ctx.save();
+      ctx.rotate(p.localAngle);
+      ctx.translate(r*0.55, 0); 
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, 70, 0, Math.PI*2);
+      ctx.fillStyle = wa(pal.safe, 0.08);
+      ctx.fill();
+      ctx.strokeStyle = wa(pal.safe, 0.6);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8,8]);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(-15, -20); ctx.lineTo(-15, 20);
+      ctx.moveTo(15, -20); ctx.lineTo(15, 20);
+      ctx.moveTo(-15, 0); ctx.lineTo(15, 0);
+      ctx.strokeStyle = wa(pal.safe, 0.9);
+      ctx.setLineDash([]);
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      
+      ctx.font = '700 14px Orbitron';
+      ctx.fillStyle = wa(pal.safe, 0.8);
+      ctx.textAlign = 'center';
+      ctx.fillText('PAD', 0, -35);
+
+      ctx.restore();
+    }
+  }
 
   // Bounty marker / home dot
   if(st.isBounty){
@@ -789,12 +849,36 @@ function drawStation(st){
   }
 
   const dist=Math.hypot(ship.x-st.x,ship.y-st.y);
-  if(dist<DOCK*3.5){
+  
+  // Detekce dokování
+  const orbitDist = !st.isHome && !st.isBounty ? st.radius * 8 : 0;
+  const orbitX = !st.isHome && !st.isBounty ? (st.x + Math.cos(st.rotation)*orbitDist) : st.x;
+  const orbitY = !st.isHome && !st.isBounty ? (st.y + Math.sin(st.rotation)*orbitDist) : st.y;
+  const d = Math.hypot(ship.x - orbitX, ship.y - orbitY);
+
+  if(d<st.radius*1.5){
+    let nearestPadD = Infinity;
+    const baseRot = (!st.isHome && !st.isBounty) ? st.rotation * 3 : (st.rotation * 2); 
+    if(st.platforms) {
+       for(const p of st.platforms) {
+         const padDist = r * 0.55;
+         const pX = orbitX + Math.cos(baseRot + p.localAngle) * padDist;
+         const pY = orbitY + Math.sin(baseRot + p.localAngle) * padDist;
+         const pd = Math.hypot(ship.x - pX, ship.y - pY);
+         if(pd < nearestPadD) nearestPadD = pd;
+       }
+    }
+
     ctx.font='10px Share Tech Mono';
-    if(dist<DOCK){
-      ctx.fillStyle=pal.safe;ctx.fillText('◆ DOCKING AVAILABLE',sx,sy+r+16);
+    const shipSpd = Math.hypot(ship.vx, ship.vy);
+    if(nearestPadD<70){
+      if(shipSpd > 20) {
+        ctx.fillStyle=pal.warn;ctx.fillText('SPEED TOO HIGH',sx,sy+r+16);
+      } else {
+        ctx.fillStyle=pal.safe;ctx.fillText('◆ DOCKING PAD ALIGNED [E]',sx,sy+r+16);
+      }
     }else{
-      ctx.fillStyle=wa(pal.w3,.8);ctx.fillText(fmtDist(dist),sx,sy+r+15);
+      ctx.fillStyle=wa(pal.w3,.8);ctx.fillText('ALIGN WITH PAD',sx,sy+r+15);
     }
   }
 }
@@ -1369,9 +1453,32 @@ let dockedSt=null,distressSent=false,fuelEmptyTimer=0;
 const SAFE_ZONE_TRADE=1500;
 function tryDock(){
   if(modalOpen())return;
-  let nearest=null,nearestD=Infinity;
-  for(const st of allNearby()){if(!st)continue;const d=Math.hypot(ship.x-st.x,ship.y-st.y);if(d<nearestD){nearestD=d;nearest=st;}}
-  if(!nearest||nearestD>DOCK){addLog('No station in dock range');return;}
+  
+  let nearest=null,nearestPadD=Infinity;
+  const shipSpd = Math.hypot(ship.vx, ship.vy);
+  
+  for(const st of allNearby()){
+    if(!st)continue;
+    const orbitDist = !st.isHome && !st.isBounty ? st.radius * 8 : 0;
+    const orbitX = !st.isHome && !st.isBounty ? (st.x + Math.cos(st.rotation)*orbitDist) : st.x;
+    const orbitY = !st.isHome && !st.isBounty ? (st.y + Math.sin(st.rotation)*orbitDist) : st.y;
+    const dist = Math.hypot(ship.x - orbitX, ship.y - orbitY);
+    
+    if(dist < st.radius*1.5 && st.platforms) {
+      const baseRot = (!st.isHome && !st.isBounty) ? st.rotation * 3 : (st.rotation * 2); 
+      for(const p of st.platforms) {
+         const padDist = st.radius * 0.55;
+         const pX = orbitX + Math.cos(baseRot + p.localAngle) * padDist;
+         const pY = orbitY + Math.sin(baseRot + p.localAngle) * padDist;
+         const pd = Math.hypot(ship.x - pX, ship.y - pY);
+         if(pd < nearestPadD) { nearestPadD = pd; nearest = st; }
+      }
+    }
+  }
+
+  if(!nearest || nearestPadD > 70){ addLog('Not aligned with any docking pad'); return; }
+  if(shipSpd > 20){ addLog('Speed too high! Slow down to dock.'); return; }
+
   nearest.discovered=true;discovered.add(nearest.key||'home');
   dockedSt=nearest;
   document.getElementById('trade-title').textContent='DOCKED · '+nearest.name.toUpperCase();
@@ -1496,10 +1603,48 @@ function drawMinimap(){
     const bx=mx(st.x),by=my(st.y);if(bx<-20||bx>w+20||by<-20||by>h+20)return;
     const sz=isFS?Math.max(4,st.radius*scale*1.5):4;
     const isContract=activeContract&&activeContract.to===st.name;
-    mmx.fillStyle=isContract?pal.accent:pal.w;
-    mmx.fillRect(bx-sz/2,by-sz/2,sz,sz);
-    if(isFS&&mmZoom>.6){mmx.font='9px Share Tech Mono';mmx.fillStyle=isContract?pal.accent:wa(pal.w,.6);mmx.textAlign='center';mmx.fillText(st.name,bx,by+sz+10);}
-    if(isContract){mmx.beginPath();mmx.arc(bx,by,sz*2.5,0,Math.PI*2);mmx.strokeStyle=wa(pal.accent,.5);mmx.lineWidth=1;mmx.stroke();}
+    
+    if(isFS && mmZoom > 4) {
+      mmx.save(); mmx.translate(bx, by);
+      const r_scaled = st.radius * scale;
+      mmx.rotate(st.rotation * 2);
+      mmx.beginPath(); mmx.arc(0,0, r_scaled, 0, Math.PI*2);
+      mmx.strokeStyle=wa(pal.w,.3); mmx.lineWidth=1;
+      mmx.setLineDash([3,4]); mmx.stroke(); mmx.setLineDash([]);
+      // Hexagon base
+      mmx.beginPath();
+      for(let i=0;i<6;i++){
+        const a=(i/6)*Math.PI*2-Math.PI/6;
+        const px=Math.cos(a)*r_scaled*.28,py=Math.sin(a)*r_scaled*.28;
+        if(i===0)mmx.moveTo(px,py);else mmx.lineTo(px,py);
+      }
+      mmx.closePath();
+      mmx.fillStyle=wa(pal.w,.08); mmx.fill();
+      mmx.strokeStyle=wa(pal.w,.8); mmx.lineWidth=1; mmx.stroke();
+
+      if(st.platforms) {
+        for(const p of st.platforms) {
+          mmx.save(); mmx.rotate(p.localAngle);
+          mmx.translate(r_scaled * 0.55, 0);
+          mmx.beginPath(); 
+          mmx.moveTo(-3, -2); mmx.lineTo(-3, 2);
+          mmx.moveTo(3, -2); mmx.lineTo(3, 2);
+          mmx.moveTo(-3, 0); mmx.lineTo(3, 0);
+          mmx.strokeStyle = wa(pal.safe, 0.9);
+          mmx.lineWidth = 1; mmx.stroke();
+          mmx.restore();
+        }
+      }
+      mmx.restore();
+      mmx.font='9px Share Tech Mono'; mmx.fillStyle=isContract?pal.accent:wa(pal.w,.6); mmx.textAlign='center';
+      mmx.fillText(st.name, bx, by + r_scaled + 14);
+      if(isContract){mmx.beginPath();mmx.arc(bx,by,r_scaled+10,0,Math.PI*2);mmx.strokeStyle=wa(pal.accent,.5);mmx.lineWidth=1;mmx.stroke();}
+    } else {
+      mmx.fillStyle=isContract?pal.accent:pal.w;
+      mmx.fillRect(bx-sz/2,by-sz/2,sz,sz);
+      if(isFS&&mmZoom>.6){mmx.font='9px Share Tech Mono';mmx.fillStyle=isContract?pal.accent:wa(pal.w,.6);mmx.textAlign='center';mmx.fillText(st.name,bx,by+sz+10);}
+      if(isContract){mmx.beginPath();mmx.arc(bx,by,sz*2.5,0,Math.PI*2);mmx.strokeStyle=wa(pal.accent,.5);mmx.lineWidth=1;mmx.stroke();}
+    }
   };
   drawStBlip(homeStation);
   const cr=isFS?Math.ceil(range/CHUNK)+1:3;
@@ -1723,7 +1868,7 @@ function togglePause(){
 }
 
 mmCv.addEventListener('click',()=>{if(!isPaused&&!mmCv.classList.contains('fullscreen'))toggleMap();});
-mmCv.addEventListener('wheel',e=>{if(mmCv.classList.contains('fullscreen')){e.preventDefault();mmZoom+=e.deltaY<0?.15:-.15;mmZoom=Math.max(.3,Math.min(4,mmZoom));}});
+mmCv.addEventListener('wheel',e=>{if(mmCv.classList.contains('fullscreen')){e.preventDefault();mmZoom+=e.deltaY<0?.20:-.20;mmZoom=Math.max(.3,Math.min(35,mmZoom));}});
 document.getElementById('btn-resume').addEventListener('click',()=>togglePause());
 document.getElementById('btn-save-quit').addEventListener('click',()=>{saveGame();location.reload();});
 document.getElementById('btn-pause-reset').addEventListener('click',()=>{if(confirm('Erase all progress?')){localStorage.removeItem('vt_save');localStorage.removeItem('vt_seed');location.reload();}});
