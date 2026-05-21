@@ -848,31 +848,11 @@ function drawStation(st){
     ctx.fillText('▼ DESTINATION',sx,sy-r-24);
   }
 
-  const dist=Math.hypot(ship.x-st.x,ship.y-st.y);
-  
-  // Detekce dokování
-  const orbitDist = !st.isHome && !st.isBounty ? st.radius * 8 : 0;
-  const orbitX = !st.isHome && !st.isBounty ? (st.x + Math.cos(st.rotation)*orbitDist) : st.x;
-  const orbitY = !st.isHome && !st.isBounty ? (st.y + Math.sin(st.rotation)*orbitDist) : st.y;
-  const d = Math.hypot(ship.x - orbitX, ship.y - orbitY);
-
-  if(d<st.radius*1.5){
-    let nearestPadD = Infinity;
-    const baseRot = (!st.isHome && !st.isBounty) ? st.rotation * 3 : (st.rotation * 2); 
-    if(st.platforms) {
-       for(const p of st.platforms) {
-         const padDist = r * 0.55;
-         const pX = orbitX + Math.cos(baseRot + p.localAngle) * padDist;
-         const pY = orbitY + Math.sin(baseRot + p.localAngle) * padDist;
-         const pd = Math.hypot(ship.x - pX, ship.y - pY);
-         if(pd < nearestPadD) nearestPadD = pd;
-       }
-    }
-
+  // Docking indicator - only show for nearest docking pad
+  if(dockingInfo.st===st && dockingInfo.padD<st.radius*1.5){
     ctx.font='10px Share Tech Mono';
-    const shipSpd = Math.hypot(ship.vx, ship.vy);
-    if(nearestPadD<70){
-      if(shipSpd > 20) {
+    if(dockingInfo.padD<70){
+      if(dockingInfo.shipSpd > 20) {
         ctx.fillStyle=pal.warn;ctx.fillText('SPEED TOO HIGH',sx,sy+r+16);
       } else {
         ctx.fillStyle=pal.safe;ctx.fillText('◆ DOCKING PAD ALIGNED [E]',sx,sy+r+16);
@@ -972,7 +952,7 @@ function fireLaser(){
     if(s.helped||s.looted)continue;
     if(lineCircle(bx1,by1,bx2,by2,s.x,s.y,16)){
       s.looted=true;changeKarma(-10,'Attacked stranded');
-      for(let i=0;i<3;i++)drops.push({x:s.x+(Math.random()-.5)*60,y:s.y+(Math.random()-.5)*60,good:GOODS[Math.floor(Math.random()*GOODS.length)],qty:Math.floor(Math.random()*4+2),ttl:6000,isSignal:false});
+      for(let i=0;i<3;i++)drops.push({x:s.x+(Math.random()-.5)*60,y:s.y+(Math.random()-.5)*60,good:GOODS[Math.floor(Math.random()*GOODS.length)],qty:Math.floor(Math.random()*4+2),ttl:2500,isSignal:false});
     }
   }
 }
@@ -1012,7 +992,7 @@ function splitMeteor(m){
 }
 function updateMeteors(dt){
   meteorTimer+=dt;
-  if(meteorTimer>2.8+Math.random()*3){meteorTimer=0;for(let i=0;i<3+Math.floor(Math.random()*4);i++)spawnMeteor();}
+  if(meteorTimer>2.8+Math.random()*3){meteorTimer=0;if(meteors.filter(m=>!m.dead).length<12)for(let i=0;i<3+Math.floor(Math.random()*4);i++)spawnMeteor();}
   for(const m of meteors){
     if(m.dead)continue;
     if(Math.hypot(m.x-ship.x,m.y-ship.y)>3000){m.dead=true;continue;}
@@ -1051,7 +1031,7 @@ function spawnBH(){
   addLog('Singularity detected');
 }
 function updateBlackHoles(dt){
-  bhTimer+=dt;if(bhTimer>50+Math.random()*40){bhTimer=0;if(blackHoles.length<2)spawnBH();}
+  bhTimer+=dt;if(bhTimer>50+Math.random()*40){bhTimer=0;if(blackHoles.length<3)spawnBH();}
   for(const bh of blackHoles){
     bh.ttl-=dt;bh.rotation+=dt*.3;
     const dx=bh.x-ship.x,dy=bh.y-ship.y,dist=Math.hypot(dx,dy);
@@ -1114,7 +1094,7 @@ function spawnSwarm(){
   showEventBanner('⚠ ASTEROID SWARM INBOUND','5 seconds — activate shield [Q] or evade!');
 }
 function updateSwarms(dt){
-  swarmTimer+=dt;if(swarmTimer>35+Math.random()*25){swarmTimer=0;spawnSwarm();}
+  swarmTimer+=dt;if(swarmTimer>35+Math.random()*25){swarmTimer=0;if(swarms.length<3)spawnSwarm();}
   for(const s of swarms){
     if(s.state==='warning'){s.warningTime-=dt;if(s.warningTime<=0)s.state='active';continue;}
     if(s.state==='active'){
@@ -1190,7 +1170,7 @@ function spawnStranded(){
   stranded.push({x:sx,y:sy,angle:Math.random()*Math.PI*2,vx:0,vy:0,name:SNAMES[Math.floor(Math.random()*SNAMES.length)]+'-'+Math.floor(Math.random()*999),helped:false,looted:false,escorting:false,ttl:120});
 }
 function updateStranded(dt){
-  strandedTimer+=dt;if(strandedTimer>50+Math.random()*30){strandedTimer=0;if(stranded.length<2)spawnStranded();}
+  strandedTimer+=dt;if(strandedTimer>50+Math.random()*30){strandedTimer=0;if(stranded.filter(s=>s.ttl>0).length<3)spawnStranded();}
   for(const s of stranded){
     s.ttl-=dt;if(s.ttl<=0)continue;
     if(s.escorting){
@@ -1340,7 +1320,7 @@ function hitBoss(damage){
   if(!activeBoss||activeBoss.dead)return;const b=activeBoss;b.hull-=damage;
   if(b.hull<=0){
     b.dead=true;addLog('★ ALIEN VANQUISHED ★');
-    for(let i=0;i<5;i++)drops.push({x:b.x+(Math.random()-.5)*120,y:b.y+(Math.random()-.5)*120,good:'ALIEN-TECH',qty:Math.floor(Math.random()*3+2),ttl:10000,isSignal:true});
+    for(let i=0;i<5;i++)drops.push({x:b.x+(Math.random()-.5)*120,y:b.y+(Math.random()-.5)*120,good:'ALIEN-TECH',qty:Math.floor(Math.random()*3+2),ttl:3500,isSignal:true});
     if(bountyAccepted){ship.credits+=bountyReward;addLog('Bounty: +'+bountyReward+' CR');bountyAccepted=false;bountyReward=0;}
     activeBoss=null;bossProj.length=0;
   }
@@ -1349,7 +1329,13 @@ function hitBoss(damage){
 // ═══ ENEMIES ═══
 const enemies=[];let spawnTimer=0;
 const SAFE_ZONE=1500;
-function inSafe(x,y){for(const st of allNearby())if(Math.hypot(x-st.x,y-st.y)<SAFE_ZONE)return true;return false;}
+let cachedSafeCheck={x:Infinity,y:Infinity,result:false,time:0};
+function inSafe(x,y){
+  const now=performance.now();
+  if(cachedSafeCheck.x===x&&cachedSafeCheck.y===y&&now-cachedSafeCheck.time<100)return cachedSafeCheck.result;
+  for(const st of allNearby())if(Math.hypot(x-st.x,y-st.y)<SAFE_ZONE){cachedSafeCheck={x,y,result:true,time:now};return true;}
+  cachedSafeCheck={x,y,result:false,time:now};return false;
+}
 function spawnEnemy(){
   if(inSafe(ship.x,ship.y))return;
   let a,d,sx,sy,tries=0;
@@ -1361,10 +1347,10 @@ function spawnEnemy(){
 function killEnemy(e){
   e.dead=true;ship.kills++;addLog('Pirate destroyed');
   const g=GOODS[Math.floor(Math.random()*GOODS.length)],q=Math.floor(Math.random()*8+3);
-  drops.push({x:e.x,y:e.y,good:g,qty:q,ttl:6000,isSignal:false});
+  drops.push({x:e.x,y:e.y,good:g,qty:q,ttl:2500,isSignal:false});
 }
 function updateEnemies(dt){
-  spawnTimer+=dt;if(spawnTimer>14){spawnTimer=0;if(enemies.filter(e=>!e.dead).length<5)spawnEnemy();}
+  spawnTimer+=dt;if(spawnTimer>14){spawnTimer=0;if(enemies.filter(e=>!e.dead).length<4)spawnEnemy();}
   for(const e of enemies){
     if(e.dead)continue;
     if(Math.hypot(e.x-ship.x,e.y-ship.y)>6000){e.dead=true;continue;}
@@ -1434,7 +1420,7 @@ function killShip(){
   if(ship.isDead)return;ship.isDead=true;
   for(const[g,q]of Object.entries(ship.cargo)){
     const loss=Math.ceil(q*.25);ship.cargo[g]=q-loss;if(ship.cargo[g]<=0)delete ship.cargo[g];
-    if(loss>0)drops.push({x:ship.x+(Math.random()-.5)*200,y:ship.y+(Math.random()-.5)*200,good:g,qty:loss,ttl:8000,isSignal:true});
+    if(loss>0)drops.push({x:ship.x+(Math.random()-.5)*200,y:ship.y+(Math.random()-.5)*200,good:g,qty:loss,ttl:3000,isSignal:true});
   }
   // Clear active contract on death
   if(activeContract){addLog('Contract lost on destruction');activeContract=null;updateContractHUD();}
@@ -1451,49 +1437,52 @@ document.getElementById('btn-respawn').addEventListener('click',()=>{
 // ═══ DOCKING ═══
 let dockedSt=null,distressSent=false,fuelEmptyTimer=0;
 const SAFE_ZONE_TRADE=1500;
-function tryDock(){
-  if(modalOpen())return;
-  
-  let nearest=null,nearestPadD=Infinity;
-  const shipSpd = Math.hypot(ship.vx, ship.vy);
-  
+let dockingInfo={st:null,padD:Infinity,shipSpd:0};
+
+function updateDockingInfo(){
+  dockingInfo={st:null,padD:Infinity,shipSpd:Math.hypot(ship.vx,ship.vy)};
+  const shipSpd=dockingInfo.shipSpd;
   for(const st of allNearby()){
     if(!st)continue;
-    const orbitDist = !st.isHome && !st.isBounty ? st.radius * 8 : 0;
-    const orbitX = !st.isHome && !st.isBounty ? (st.x + Math.cos(st.rotation)*orbitDist) : st.x;
-    const orbitY = !st.isHome && !st.isBounty ? (st.y + Math.sin(st.rotation)*orbitDist) : st.y;
-    const dist = Math.hypot(ship.x - orbitX, ship.y - orbitY);
-    
-    if(dist < st.radius*1.5 && st.platforms) {
-      const baseRot = (!st.isHome && !st.isBounty) ? st.rotation * 3 : (st.rotation * 2); 
-      for(const p of st.platforms) {
-         const padDist = st.radius * 0.55;
-         const pX = orbitX + Math.cos(baseRot + p.localAngle) * padDist;
-         const pY = orbitY + Math.sin(baseRot + p.localAngle) * padDist;
-         const pd = Math.hypot(ship.x - pX, ship.y - pY);
-         if(pd < nearestPadD) { nearestPadD = pd; nearest = st; }
+    const orbitDist=!st.isHome&&!st.isBounty?st.radius*8:0;
+    const orbitX=!st.isHome&&!st.isBounty?(st.x+Math.cos(st.rotation)*orbitDist):st.x;
+    const orbitY=!st.isHome&&!st.isBounty?(st.y+Math.sin(st.rotation)*orbitDist):st.y;
+    const dist=Math.hypot(ship.x-orbitX,ship.y-orbitY);
+    if(dist<st.radius*1.5&&st.platforms){
+      const baseRot=(!st.isHome&&!st.isBounty)?st.rotation*3:(st.rotation*2);
+      for(const p of st.platforms){
+        const padDist=st.radius*0.55;
+        const pX=orbitX+Math.cos(baseRot+p.localAngle)*padDist;
+        const pY=orbitY+Math.sin(baseRot+p.localAngle)*padDist;
+        const pd=Math.hypot(ship.x-pX,ship.y-pY);
+        if(pd<dockingInfo.padD){dockingInfo.padD=pd;dockingInfo.st=st;}
       }
     }
   }
+}
 
-  if(!nearest || nearestPadD > 70){ addLog('Not aligned with any docking pad'); return; }
-  if(shipSpd > 20){ addLog('Speed too high! Slow down to dock.'); return; }
+function tryDock(){
+  if(modalOpen())return;
+  const {st,padD,shipSpd}=dockingInfo;
+  if(!st||padD>70){addLog('Not aligned with any docking pad');return;}
+  if(shipSpd>20){addLog('Speed too high! Slow down to dock.');return;}
 
-  nearest.discovered=true;discovered.add(nearest.key||'home');
-  dockedSt=nearest;
-  document.getElementById('trade-title').textContent='DOCKED · '+nearest.name.toUpperCase();
-  buildRows(nearest);
-  updateFuelLabel(nearest);updateRepairLabel(nearest);updateShieldLabel();
+  
+  st.discovered=true;discovered.add(st.key||'home');
+  dockedSt=st;
+  document.getElementById('trade-title').textContent='DOCKED · '+st.name.toUpperCase();
+  buildRows(st);
+  updateFuelLabel(st);updateRepairLabel(st);updateShieldLabel();
   // Contract check
-  checkContractDelivery(nearest);
-  buildContractPanel(nearest);
-  document.getElementById('bounty-area').style.display=nearest.isBounty?'block':'none';
-  if(nearest.isBounty){
+  checkContractDelivery(st);
+  buildContractPanel(st);
+  document.getElementById('bounty-area').style.display=st.isBounty?'block':'none';
+  if(st.isBounty){
     const bt=document.getElementById('bounty-text');
     if(bountyAccepted){bt.innerHTML='Active hunt: <span style="color:#000">ALIEN PRESENCE</span><br>Reward: '+bountyReward+' CR';document.getElementById('btn-bounty').style.display='none';}
     else{bt.innerHTML='Hunt the alien terrorising this sector.<br>Cost: <span style="color:#000">2,000 CR</span> · Reward: <span style="color:#000">15,000 CR</span>';document.getElementById('btn-bounty').style.display='inline-block';}
   }
-  addLog('Docked at '+nearest.name);
+  addLog('Docked at '+st.name);
   // Show helpful hint on first docking
   if(cargoTotal()===0&&Object.keys(ship.cargo).length===0){
     addLog('TIP: Buy cargo here first, then accept contracts to other stations');
@@ -1573,7 +1562,7 @@ document.getElementById('btn-help-escort').addEventListener('click',()=>{
 });
 document.getElementById('btn-loot').addEventListener('click',()=>{
   if(!activeStranded)return;
-  for(let i=0;i<5;i++)drops.push({x:activeStranded.x+(Math.random()-.5)*80,y:activeStranded.y+(Math.random()-.5)*80,good:GOODS[Math.floor(Math.random()*GOODS.length)],qty:Math.floor(Math.random()*5+3),ttl:8000,isSignal:false});
+  for(let i=0;i<5;i++)drops.push({x:activeStranded.x+(Math.random()-.5)*80,y:activeStranded.y+(Math.random()-.5)*80,good:GOODS[Math.floor(Math.random()*GOODS.length)],qty:Math.floor(Math.random()*5+3),ttl:3000,isSignal:false});
   activeStranded.looted=true;changeKarma(-10,'Looted stranded');
   document.getElementById('stranded-modal').classList.remove('open');activeStranded=null;
 });
@@ -1591,7 +1580,7 @@ function drawMinimap(){
   if(!isFS){mmx.beginPath();mmx.arc(cx,cy,Math.min(w,h)/2-2,0,Math.PI*2);mmx.strokeStyle=wa(pal.w,.2);mmx.lineWidth=1;mmx.stroke();}
   if(isFS){
     mmx.strokeStyle=wa(pal.w,.05);mmx.lineWidth=1;
-    const gs=1000,sx0=Math.floor((ship.x-range)/gs)*gs;
+    const gs=isFS&&mmZoom>3?3000:1000;const sx0=Math.floor((ship.x-range)/gs)*gs;
     for(let x=sx0;x<=ship.x+range;x+=gs){mmx.beginPath();mmx.moveTo(mx(x),0);mmx.lineTo(mx(x),h);mmx.stroke();}
     const sy0=Math.floor((ship.y-range)/gs)*gs;
     for(let y=sy0;y<=ship.y+range;y+=gs){mmx.beginPath();mmx.moveTo(0,my(y));mmx.lineTo(w,my(y));mmx.stroke();}
@@ -1916,6 +1905,9 @@ function loop(ts){
   drawGalaxy();
   drawStars();drawGrid();
 
+  // Update docking info once per frame
+  if(!isPaused)updateDockingInfo();
+
   // Stations
   drawStation(homeStation);
   for(const[ccx,ccy]of visChunks(2)){const st=getStation(ccx,ccy);if(st&&st.discovered)drawStation(st);}
@@ -1933,6 +1925,8 @@ function loop(ts){
     updateBlackHoles(dt);updateSwarms(dt);updateStranded(dt);
     updateBoss(dt);updateBossProj(dt);tickShield(dt);regenStations(dt);
     for(let i=drops.length-1;i>=0;i--){drops[i].ttl-=dt;if(drops[i].ttl<=0)drops.splice(i,1);}
+    // Hard cap drops to prevent memory overflow
+    if(drops.length>200){drops.splice(0,drops.length-150);}
   }
   drawDrops();
   updateHUD();
@@ -1941,16 +1935,22 @@ function loop(ts){
 
 // ═══ BOOT ═══
 document.getElementById('boot-start').addEventListener('click',()=>{
-  buildGalaxy();
-  loadGame();
-  document.getElementById('boot').style.display='none';
-  addLog('System online · SEED:'+SEED.toString(16).toUpperCase());
-  addLog('Milky Way sector · coords in light-seconds');
-  addLog('WASD: thrust/brake · A/D: rotate');
-  addLog('SPACE: laser · Q: shield · E: dock');
-  addLog('Acquire cargo, accept contracts, deliver');
-  setTimeout(()=>{spawnEnemy();addLog('⚠ Pirate detected');},9000);
-  requestAnimationFrame(ts=>{lastTime=ts;requestAnimationFrame(loop);});
+  try{
+    buildGalaxy();
+    loadGame();
+    document.getElementById('boot').style.display='none';
+    addLog('System online · SEED:'+SEED.toString(16).toUpperCase());
+    addLog('Milky Way sector · coords in light-seconds');
+    addLog('WASD: thrust/brake · A/D: rotate');
+    addLog('SPACE: laser · Q: shield · E: dock');
+    addLog('Acquire cargo, accept contracts, deliver');
+    setTimeout(()=>{spawnEnemy();addLog('⚠ Pirate detected');},9000);
+    lastTime=performance.now();
+    requestAnimationFrame(loop);
+  }catch(e){
+    console.error('Boot error:',e);
+    addLog('ERROR: Failed to start game');
+  }
 });
 </script>
 </body>
