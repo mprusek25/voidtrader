@@ -128,7 +128,7 @@ body{
 
 /* ── Contract HUD strip ── */
 #contract-hud{
-  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  position:fixed;top:46px;left:50%;transform:translateX(-50%);
   background:var(--panel);border:1px solid rgba(0,0,0,.14);border-top:none;
   font-family:var(--fnt2);font-size:11px;
   padding:8px 20px 10px;z-index:11;pointer-events:none;
@@ -243,12 +243,118 @@ body{
 #sbox{border:1px solid rgba(0,0,0,.2);background:var(--bg);width:440px;padding:24px;font-size:11px;color:rgba(0,0,0,.65);pointer-events:all;text-align:center;}
 #sbox h2{font-family:var(--fnt);font-size:12px;letter-spacing:.3em;color:var(--ink);margin-bottom:6px;}
 #sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:rgba(0,0,0,.55);}
+
+/* ── Speed Mode HUD ── */
+#speed-mode-hud{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid rgba(0,0,0,.14);border-top:none;border-bottom:2px solid rgba(0,0,0,.5);
+  font-family:var(--fnt);font-size:8px;letter-spacing:.35em;
+  padding:6px 18px 8px;z-index:11;pointer-events:none;
+  display:flex;gap:20px;align-items:center;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,10px 100%);
+  margin-top:0;
+}
+.smode-btn{
+  padding:3px 10px;border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.3);
+  font-family:var(--fnt);font-size:7px;letter-spacing:.3em;cursor:pointer;
+  pointer-events:all;transition:all .15s;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+}
+.smode-btn.active{border-color:rgba(0,0,0,.7);color:var(--ink);background:rgba(0,0,0,.07);}
+.smode-btn:hover:not(.active){border-color:rgba(0,0,0,.35);color:rgba(0,0,0,.6);}
+.smode-btn.hyperdrive{border-color:rgba(160,60,0,.5);color:var(--accent);}
+.smode-btn.hyperdrive.active{background:rgba(160,60,0,.08);}
+#smode-label{color:var(--ink);font-size:9px;letter-spacing:.25em;min-width:80px;text-align:center;}
+
+/* ── Hyperdrive Destination Modal ── */
+#hyperdrive-modal{
+  display:none;position:fixed;inset:0;
+  background:rgba(245,243,238,.93);z-index:115;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(14px);
+}
+#hyperdrive-modal.open{display:flex;}
+#hyperdrive-box{
+  border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--accent);
+  background:var(--bg);width:520px;max-height:80vh;overflow-y:auto;padding:24px;
+  font-family:var(--fnt2);font-size:12px;color:rgba(0,0,0,.65);
+  pointer-events:all;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
+}
+#hyperdrive-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--accent);margin-bottom:4px;font-weight:500;}
+#hyperdrive-box .hd-sub{font-size:10px;color:rgba(0,0,0,.35);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:10px;}
+#hyperdrive-box .hd-fuel-warn{
+  font-size:11px;color:var(--warn);letter-spacing:.1em;margin-bottom:14px;
+  border:1px solid rgba(200,100,0,.25);padding:8px 12px;background:rgba(200,100,0,.04);
+}
+.hd-dest{
+  display:grid;grid-template-columns:1fr 90px 80px;gap:8px;align-items:center;
+  border:1px solid rgba(0,0,0,.1);padding:10px 12px;margin-bottom:6px;cursor:pointer;
+  transition:border-color .15s,background .15s;font-size:11px;
+}
+.hd-dest:hover{border-color:rgba(0,0,0,.4);background:rgba(0,0,0,.03);}
+.hd-dest .hd-name{color:var(--ink);font-family:var(--fnt);font-size:9px;letter-spacing:.25em;}
+.hd-dest .hd-dist{color:rgba(0,0,0,.4);font-size:10px;}
+.hd-dest .hd-jump{color:var(--accent);font-size:10px;text-align:right;}
+.hd-dest.no-fuel{opacity:.4;cursor:not-allowed;}
+.hd-dest.no-fuel:hover{border-color:rgba(0,0,0,.1);background:transparent;}
+#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(0,0,0,.12);background:transparent;color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#hyperdrive-close:hover{background:rgba(0,0,0,.04);}
+
+/* ── Trajectory Warning ── */
+#traj-warning{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;z-index:25;
+  display:none;text-align:center;
+}
+#traj-warning.active{display:block;}
+#traj-warning .tw-box{
+  border:2px solid var(--danger);padding:12px 28px;
+  background:rgba(245,243,238,.9);
+  font-family:var(--fnt);font-size:11px;letter-spacing:.3em;color:var(--danger);
+  animation:twPulse .35s ease-in-out infinite alternate;
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+}
+@keyframes twPulse{from{border-color:rgba(204,0,0,.4);color:rgba(204,0,0,.6);}to{border-color:var(--danger);color:var(--danger);}}
+
+/* ── Wormhole overlay ── */
+#wormhole-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:90;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s;
+}
+#wormhole-overlay.active{opacity:1;}
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
 <canvas id="minimap" width="180" height="180"></canvas>
 <div id="minimap-label">MAP · [M]</div>
+
+<!-- Speed Mode HUD (replaces old contract-hud position, placed separately) -->
+<div id="speed-mode-hud">
+  <button class="smode-btn active" id="smode-maneuver" onclick="setSpeedMode('MANEUVER')">MANEUVERING</button>
+  <button class="smode-btn" id="smode-cosmic" onclick="setSpeedMode('COSMIC')">COSMIC</button>
+  <button class="smode-btn hyperdrive" id="smode-hyperdrive" onclick="openHyperdriveMenu()">HYPERDRIVE [J]</button>
+  <span id="smode-label">MANEUVERING</span>
+</div>
+
+<!-- Hyperdrive Destination Modal -->
+<div id="hyperdrive-modal">
+  <div id="hyperdrive-box">
+    <h2>HYPERDRIVE · DESTINATION SELECT</h2>
+    <div class="hd-sub">JUMP COST: <span style="color:var(--accent)" id="hd-fuel-cost">–</span> FUEL &nbsp;·&nbsp; CURRENT: <span id="hd-fuel-current">–</span></div>
+    <div class="hd-fuel-warn" id="hd-no-fuel-msg" style="display:none">⚠ INSUFFICIENT FUEL FOR HYPERDRIVE JUMP (requires 2/3 max fuel)</div>
+    <div id="hyperdrive-dest-list"></div>
+    <button id="hyperdrive-close">[ CANCEL ]</button>
+  </div>
+</div>
+
+<!-- Trajectory Warning -->
+<div id="traj-warning"><div class="tw-box">⚠ IMPACT TRAJECTORY DETECTED ⚠</div></div>
+
+<!-- Wormhole overlay canvas -->
+<div id="wormhole-overlay"><canvas id="wormhole-canvas"></canvas></div>
 
 <!-- Contract HUD strip -->
 <div id="contract-hud">
@@ -399,6 +505,9 @@ body{
   <div class="bl ok">ESCORT & DELIVERY SYSTEM READY</div>
   <div class="bl ok">CARTOGRAPHY SYSTEM ONLINE</div>
   <div class="bl ok">SAVE SYSTEM READY</div>
+  <div class="bl ok">SPEED MODE SYSTEM · MANEUVER / COSMIC</div>
+  <div class="bl ok">HYPERDRIVE & WORMHOLE ENGINE ONLINE</div>
+  <div class="bl ok">TRAJECTORY WARNING SYSTEM ACTIVE</div>
   <button id="boot-start">[ LAUNCH SEQUENCE ]</button>
   <button id="boot-reset">[ ERASE SAVE ]</button>
 </div>
@@ -451,13 +560,33 @@ const CFG = {
   DOCK_MAX_SPD:20,      // max speed to dock
   SAFE_ZONE:   1500,    // radius around stations where pirates don't attack
   GRAV_RADIUS: 1500,    // radius of station gravity-drag
-  CRUISE_SPD:  180,     // minimum speed in open space
+  CRUISE_SPD:  180,     // minimum speed in open space (base / maneuvering mode)
+
+  // ── Speed Modes ──
+  // MANEUVER: responsive combat/docking mode — fast enough to fight, slow enough to dock
+  MANEUVER_THRUST:   520,    // was 160 — accelerates quickly for evasion
+  MANEUVER_MAX_SPD:  320,    // was 90 — fast enough for combat, slow enough to dock
+  MANEUVER_ROT:      3.4,
+  MANEUVER_CRUISE:   0,     // no cruise floor — full control
+
+  // COSMIC: high speed cruising
+  COSMIC_THRUST:     420,
+  COSMIC_MAX_SPD:    1200,
+  COSMIC_ROT:        2.0,
+  COSMIC_CRUISE:     380,   // speed floor in open space
+
+  // Trajectory warning: look-ahead distance at cosmic speed (world units)
+  TRAJ_WARN_DIST:    1800,
+
+  // Hyperdrive
+  HYPERDRIVE_FUEL_COST_FRAC: 2/3,   // fraction of FUEL_MAX consumed per jump
+  HYPERDRIVE_SAFE_RADIUS:    900,    // spawn radius around target station after jump
 
   // Fuel
   FUEL_MAX:    100,
   FUEL_BURN:   0.35,    // per second at thrust
 
-  // Ship
+  // Ship (base — overridden per speed mode)
   SHIP_THRUST: 280,
   SHIP_MAX_SPD:440,
   SHIP_ROT:    2.6,
@@ -481,10 +610,12 @@ const CFG = {
   ENEMY_CAP:   4,
   ENEMY_SPAWN_INTERVAL: 14,
 
-  // Meteors
-  METEOR_CAP:  12,
-  METEOR_SPAWN_INTERVAL_MIN: 2.8,
-  METEOR_SPAWN_INTERVAL_MAX: 5.8,
+  // Meteors — drastically reduced for realistic space emptiness
+  METEOR_CAP:  3,                    // was 12 — space is vast and empty
+  METEOR_SPAWN_INTERVAL_MIN: 18,     // was 2.8 — very rare encounters
+  METEOR_SPAWN_INTERVAL_MAX: 40,     // was 5.8
+  METEOR_SPAWN_COUNT_MIN:    1,      // spawn 1 at a time (was 3-7)
+  METEOR_SPAWN_COUNT_MAX:    2,
 
   // Swarms
   SWARM_CAP:   3,
@@ -724,7 +855,258 @@ const ship = {
   invincible:0,
   hasShield: false,
   shieldActive: false,
+  speedMode: 'MANEUVER',   // 'MANEUVER' | 'COSMIC'
+  cosmicBoostTime: 0,      // seconds W has been held in COSMIC mode — drives exp acceleration
 };
+
+// ── Speed Mode System ────────────────────────────────────────────────────────
+
+function setSpeedMode(mode) {
+  if (mode === ship.speedMode) return;
+  ship.speedMode = mode;
+  ship.cosmicBoostTime = 0;  // reset boost ramp on mode switch
+  applySpeedModeStats();
+  // Update HUD buttons
+  document.getElementById('smode-maneuver').classList.toggle('active', mode === 'MANEUVER');
+  document.getElementById('smode-cosmic').classList.toggle('active', mode === 'COSMIC');
+  document.getElementById('smode-label').textContent = mode === 'MANEUVER' ? 'MANEUVERING' : 'COSMIC SPEED';
+  addLog('Speed mode: ' + (mode === 'MANEUVER' ? 'MANEUVERING' : 'COSMIC CRUISE'));
+}
+
+function applySpeedModeStats() {
+  if (ship.speedMode === 'MANEUVER') {
+    ship.thrust   = CFG.MANEUVER_THRUST;
+    ship.maxSpeed = CFG.MANEUVER_MAX_SPD;
+    ship.rotSpeed = CFG.MANEUVER_ROT;
+  } else {
+    ship.thrust   = CFG.COSMIC_THRUST;
+    ship.maxSpeed = CFG.COSMIC_MAX_SPD;
+    ship.rotSpeed = CFG.COSMIC_ROT;
+  }
+}
+
+// Apply initial stats
+applySpeedModeStats();
+
+// ── Trajectory Warning System ─────────────────────────────────────────────────
+
+let _trajWarnActive = false;
+let _trajWarnSound  = null;   // AudioContext beep
+
+function checkTrajectoryWarning() {
+  if (ship.speedMode !== 'COSMIC') { setTrajWarn(false); return; }
+  const spd = Math.hypot(ship.vx, ship.vy);
+  if (spd < 100) { setTrajWarn(false); return; }
+
+  const nx = Math.sin(ship.angle), ny = -Math.cos(ship.angle);
+  const x1 = ship.x, y1 = ship.y;
+  const x2 = ship.x + nx * CFG.TRAJ_WARN_DIST;
+  const y2 = ship.y + ny * CFG.TRAJ_WARN_DIST;
+
+  let hit = false;
+  for (const m of meteors) {
+    if (m.dead) continue;
+    if (lineCircle(x1, y1, x2, y2, m.x, m.y, m.r + 30)) { hit = true; break; }
+  }
+  if (!hit) {
+    // Also check swarm rocks
+    for (const s of swarms) {
+      if (s.state !== 'active') continue;
+      for (const r of s.rocks) {
+        if (lineCircle(x1, y1, x2, y2, s.cx+r.ox, s.cy+r.oy, r.r + 20)) { hit = true; break; }
+      }
+      if (hit) break;
+    }
+  }
+  setTrajWarn(hit);
+}
+
+function setTrajWarn(active) {
+  if (active === _trajWarnActive) return;
+  _trajWarnActive = active;
+  document.getElementById('traj-warning').classList.toggle('active', active);
+  if (active) playTrajBeep();
+}
+
+let _beepTimer = 0;
+function playTrajBeep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'square'; osc.frequency.value = 880;
+    g.gain.setValueAtTime(0.04, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.18);
+  } catch(e) {}
+}
+
+// ── Wormhole / Hyperdrive Visual System ──────────────────────────────────────
+
+let wormholeState = null; // { phase:'enter'|'exit', timer:0, duration:1.2, onComplete:fn }
+const wormholeCv  = document.getElementById('wormhole-canvas');
+const wormholeCtx = wormholeCv.getContext('2d');
+
+function resizeWormhole() {
+  wormholeCv.width  = window.innerWidth;
+  wormholeCv.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeWormhole);
+resizeWormhole();
+
+function startWormhole(phase, onComplete) {
+  wormholeState = { phase, timer: 0, duration: 1.4, onComplete };
+  document.getElementById('wormhole-overlay').classList.add('active');
+}
+
+function updateWormhole(dt) {
+  if (!wormholeState) return;
+  wormholeState.timer += dt;
+  const t  = wormholeState.timer / wormholeState.duration;
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+
+  wormholeCtx.clearRect(0, 0, wormholeCv.width, wormholeCv.height);
+
+  // Progress: enter ramps in (0→1), exit ramps out (1→0)
+  const progress = wormholeState.phase === 'enter' ? Math.min(t, 1) : Math.max(1 - t, 0);
+
+  // Black tunnel fill
+  const maxR = Math.hypot(cx, cy) * 1.4;
+  const innerR = progress * maxR * 0.6;
+  const outerR = progress * maxR * 1.1;
+  const grad = wormholeCtx.createRadialGradient(cx, cy, innerR * 0.1, cx, cy, outerR);
+  grad.addColorStop(0,   `rgba(0,0,0,${progress * 0.97})`);
+  grad.addColorStop(0.6, `rgba(0,0,0,${progress * 0.75})`);
+  grad.addColorStop(1,   `rgba(0,0,0,0)`);
+  wormholeCtx.beginPath(); wormholeCtx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  wormholeCtx.fillStyle = grad; wormholeCtx.fill();
+
+  // Spiral rings
+  const now = Date.now() * 0.001;
+  const ringCount = 14;
+  for (let i = 0; i < ringCount; i++) {
+    const frac = i / ringCount;
+    const r    = frac * innerR * (0.4 + progress * 0.6);
+    const spin = now * (4 + frac * 8) * (wormholeState.phase === 'enter' ? 1 : -1);
+    const alpha = progress * (1 - frac * 0.5) * 0.9;
+    wormholeCtx.beginPath();
+    wormholeCtx.arc(cx, cy, r, spin, spin + Math.PI * 1.6);
+    wormholeCtx.strokeStyle = `rgba(100,80,60,${alpha})`;
+    wormholeCtx.lineWidth   = 1 + frac * 2;
+    wormholeCtx.stroke();
+    // Bright accent ring
+    if (i % 3 === 0) {
+      wormholeCtx.beginPath();
+      wormholeCtx.arc(cx, cy, r * 0.95, spin + 0.4, spin + 0.85);
+      wormholeCtx.strokeStyle = `rgba(200,150,80,${alpha * 0.8})`;
+      wormholeCtx.lineWidth   = 0.8;
+      wormholeCtx.stroke();
+    }
+  }
+
+  // Central glow
+  if (progress > 0.1) {
+    const cg = wormholeCtx.createRadialGradient(cx, cy, 0, cx, cy, innerR * 0.25);
+    cg.addColorStop(0, `rgba(255,200,100,${progress * 0.5})`);
+    cg.addColorStop(1, `rgba(0,0,0,0)`);
+    wormholeCtx.beginPath(); wormholeCtx.arc(cx, cy, innerR * 0.25, 0, Math.PI * 2);
+    wormholeCtx.fillStyle = cg; wormholeCtx.fill();
+  }
+
+  // Radial speed lines (streaking stars)
+  for (let i = 0; i < 60; i++) {
+    const a   = (i / 60) * Math.PI * 2 + now * 0.5;
+    const r1  = innerR * 0.3 * (0.5 + 0.5 * Math.sin(a * 3 + now));
+    const r2  = r1 + 20 + innerR * 0.2;
+    wormholeCtx.beginPath();
+    wormholeCtx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    wormholeCtx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    wormholeCtx.strokeStyle = `rgba(200,180,140,${progress * 0.25})`;
+    wormholeCtx.lineWidth   = 0.6;
+    wormholeCtx.stroke();
+  }
+
+  // On completion callback
+  if (wormholeState.timer >= wormholeState.duration) {
+    if (wormholeState.onComplete) wormholeState.onComplete();
+    if (wormholeState.phase === 'exit') {
+      wormholeState = null;
+      document.getElementById('wormhole-overlay').classList.remove('active');
+      wormholeCtx.clearRect(0, 0, wormholeCv.width, wormholeCv.height);
+    } else {
+      wormholeState = null;
+    }
+  }
+}
+
+// ── Hyperdrive Menu ───────────────────────────────────────────────────────────
+
+function openHyperdriveMenu() {
+  if (isPaused || ship.isDead) return;
+  const jumpCost = Math.ceil(CFG.FUEL_MAX * CFG.HYPERDRIVE_FUEL_COST_FRAC);
+  document.getElementById('hd-fuel-cost').textContent    = jumpCost;
+  document.getElementById('hd-fuel-current').textContent = Math.floor(ship.fuel) + ' / ' + CFG.FUEL_MAX;
+  const canJump = ship.fuel >= jumpCost;
+  document.getElementById('hd-no-fuel-msg').style.display = canJump ? 'none' : 'block';
+
+  // Build destination list — all discovered stations
+  const destList = document.getElementById('hyperdrive-dest-list');
+  destList.innerHTML = '';
+  const stations = [homeStation, ...Array.from(stCache.values()).filter(s => s && s.discovered && s !== homeStation)];
+
+  if (stations.length <= 1) {
+    destList.innerHTML = '<div style="color:rgba(0,0,0,.35);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
+  } else {
+    stations.forEach(st => {
+      if (!st) return;
+      const dist    = Math.hypot(ship.x - st.x, ship.y - st.y);
+      const isCur   = dist < 200;
+      if (isCur) return; // Don't jump to current location
+      const div = document.createElement('div');
+      div.className = 'hd-dest' + (!canJump ? ' no-fuel' : '');
+      div.innerHTML = `<span class="hd-name">${st.isHome ? 'HOME STATION' : st.name}</span>
+        <span class="hd-dist">${fmtDist(Math.floor(dist))}</span>
+        <span class="hd-jump">${canJump ? '▶ JUMP' : 'NO FUEL'}</span>`;
+      if (canJump) div.onclick = () => initiateHyperdrive(st);
+      destList.appendChild(div);
+    });
+  }
+  document.getElementById('hyperdrive-modal').classList.add('open');
+}
+
+function initiateHyperdrive(targetStation) {
+  const jumpCost = Math.ceil(CFG.FUEL_MAX * CFG.HYPERDRIVE_FUEL_COST_FRAC);
+  if (ship.fuel < jumpCost) { addLog('Insufficient fuel for hyperdrive'); return; }
+
+  document.getElementById('hyperdrive-modal').classList.remove('open');
+  ship.fuel -= jumpCost;
+  ship.vx = 0; ship.vy = 0;
+  addLog('HYPERDRIVE ENGAGED · JUMP TO ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
+  showEventBanner('HYPERDRIVE JUMP', 'Engaging wormhole · brace for transit');
+
+  // Play entry wormhole, then teleport, then play exit wormhole
+  startWormhole('enter', () => {
+    // Teleport: spawn at random position around target station at safe radius
+    const jumpAngle = Math.random() * Math.PI * 2;
+    ship.x = targetStation.x + Math.cos(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
+    ship.y = targetStation.y + Math.sin(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
+    ship.vx = 0; ship.vy = 0;
+    ship.invincible = 4;
+    cam.x = ship.x; cam.y = ship.y;
+    if (!targetStation.discovered) {
+      targetStation.discovered = true;
+      if (targetStation.key) discovered.add(targetStation.key);
+    }
+    addLog('Transit complete · arrived near ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
+    // Short pause then play exit animation
+    setTimeout(() => startWormhole('exit', null), 60);
+  });
+}
+
+document.getElementById('hyperdrive-close').addEventListener('click', () => {
+  document.getElementById('hyperdrive-modal').classList.remove('open');
+});
 
 const cargoTotal = () => Object.values(ship.cargo).reduce((a,b)=>a+b, 0);
 
@@ -735,12 +1117,23 @@ function updateShip(dt) {
   if (keys['KeyA'] || keys['ArrowLeft'])  ship.angle -= ship.rotSpeed * dt;
   if (keys['KeyD'] || keys['ArrowRight']) ship.angle += ship.rotSpeed * dt;
 
-  // Thrust
+  // Thrust — with exponential boost in COSMIC mode
   const thrusting = (keys['KeyW'] || keys['ArrowUp']) && ship.fuel > 0;
   if (thrusting) {
-    ship.vx += Math.sin(ship.angle) * ship.thrust * dt;
-    ship.vy -= Math.cos(ship.angle) * ship.thrust * dt;
+    if (ship.speedMode === 'COSMIC') {
+      // Exponential boost: ramps from 1x up to ~8x thrust over ~4 seconds of held W
+      ship.cosmicBoostTime = Math.min(ship.cosmicBoostTime + dt, 5.0);
+      const boostMult = Math.pow(2.0, ship.cosmicBoostTime * 1.1); // 2^(t*1.1): 1x at t=0, ~8x at t=3s, ~32x at t=5s
+      ship.vx += Math.sin(ship.angle) * ship.thrust * boostMult * dt;
+      ship.vy -= Math.cos(ship.angle) * ship.thrust * boostMult * dt;
+    } else {
+      ship.vx += Math.sin(ship.angle) * ship.thrust * dt;
+      ship.vy -= Math.cos(ship.angle) * ship.thrust * dt;
+    }
     ship.fuel = Math.max(0, ship.fuel - CFG.FUEL_BURN * dt);
+  } else {
+    // Decay boost timer when not thrusting
+    ship.cosmicBoostTime = Math.max(0, ship.cosmicBoostTime - dt * 2.5);
   }
 
   // Brake
@@ -770,15 +1163,22 @@ function updateShip(dt) {
   const spd = Math.hypot(ship.vx, ship.vy);
   if (spd > ship.maxSpeed) { ship.vx=(ship.vx/spd)*ship.maxSpeed; ship.vy=(ship.vy/spd)*ship.maxSpeed; }
 
-  // Cruise speed in open space (ETS2-feel — ship keeps moving)
-  if (!inGrav && !(keys['KeyS'] || keys['ArrowDown'])) {
-    if (spd < CFG.CRUISE_SPD && spd > 5) {
-      const b = CFG.CRUISE_SPD / spd;
+  // Cruise speed in open space — mode dependent
+  const cruiseFloor = ship.speedMode === 'COSMIC' ? CFG.COSMIC_CRUISE : CFG.MANEUVER_CRUISE;
+  if (!inGrav && !(keys['KeyS'] || keys['ArrowDown']) && cruiseFloor > 0) {
+    if (spd < cruiseFloor && spd > 5) {
+      const b = cruiseFloor / spd;
       ship.vx *= b; ship.vy *= b;
     } else if (spd <= 5) {
-      ship.vx = Math.sin(ship.angle) * CFG.CRUISE_SPD;
-      ship.vy = -Math.cos(ship.angle) * CFG.CRUISE_SPD;
+      ship.vx = Math.sin(ship.angle) * cruiseFloor;
+      ship.vy = -Math.cos(ship.angle) * cruiseFloor;
     }
+  }
+  // In MANEUVER mode — allow ship to slow naturally but not too fast
+  if (ship.speedMode === 'MANEUVER' && !inGrav && !(keys['KeyS'] || keys['ArrowDown']) && !thrusting) {
+    ship.vx *= Math.pow(0.992, dt * 60);
+    ship.vy *= Math.pow(0.992, dt * 60);
+    if (spd < 2) { ship.vx = 0; ship.vy = 0; }
   }
 
   ship.x += ship.vx * dt;
@@ -805,6 +1205,7 @@ function updateShip(dt) {
 
   checkFuel(dt);
   updateContractHUD();
+  checkTrajectoryWarning();
 }
 
 /** Draw the player or enemy ship at world position sx,sy */
@@ -812,14 +1213,16 @@ function drawShipAt(s, sx, sy, col, isPlayer) {
   col = col || PAL.ink;
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.angle);
 
-  // Engine plume
+  // Engine plume — grows with cosmic boost
   if (isPlayer && (keys['KeyW']||keys['ArrowUp']) && s.fuel > 0) {
     const f  = .7 + Math.random()*.3;
-    const pl = 10 + 20*f;
-    ctx.beginPath(); ctx.moveTo(-7,14); ctx.lineTo(0,14+pl*1.15); ctx.lineTo(7,14);
-    ctx.strokeStyle = wa(PAL.accent, .1*f); ctx.lineWidth = 8; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-4,14); ctx.lineTo(0,14+pl);     ctx.lineTo(4,14);
-    ctx.strokeStyle = wa(PAL.accent, .4*f); ctx.lineWidth = 2.5; ctx.stroke();
+    const boostScale = s.speedMode === 'COSMIC' ? 1 + s.cosmicBoostTime * 0.7 : 1;
+    const pl = (10 + 20*f) * boostScale;
+    const pw = boostScale;
+    ctx.beginPath(); ctx.moveTo(-7*pw,14); ctx.lineTo(0,14+pl*1.15); ctx.lineTo(7*pw,14);
+    ctx.strokeStyle = wa(PAL.accent, Math.min(.25, .1*f*boostScale)); ctx.lineWidth = 8*pw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4*pw,14); ctx.lineTo(0,14+pl);      ctx.lineTo(4*pw,14);
+    ctx.strokeStyle = wa(PAL.accent, .4*f); ctx.lineWidth = 2.5*pw; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-2,14); ctx.lineTo(0,14+pl*.55); ctx.lineTo(2,14);
     ctx.strokeStyle = wa(PAL.ink, .75*f);  ctx.lineWidth = 1.2;  ctx.stroke();
   }
@@ -895,7 +1298,7 @@ let   mmZoom    = 1;
 
 function freshHome() {
   return {
-    x:0, y:-500, name:'HOME-STATION', radius:660, rotation:0, rotSpeed:.1,
+    x:0, y:-500, name:'HOME-STATION', radius:160, rotation:0, rotSpeed:.1,
     isHome:true, discovered:true, key:'home',
     platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
     inv:{ FUEL:{qty:999,price:12}, ORE:{qty:80,price:40}, TECH:{qty:30,price:200}, FOOD:{qty:200,price:8}, MEDS:{qty:60,price:85}, PARTS:{qty:50,price:120} },
@@ -920,7 +1323,7 @@ function getStation(cx, cy) {
     stCache.set(key, {
       x:(cx + rng()*.7 + .15)*CFG.CHUNK,
       y:(cy + rng()*.7 + .15)*CFG.CHUNK,
-      name:nm, radius:360+rng()*240, rotation:0, rotSpeed:(rng()-.5)*.4,
+      name:nm, radius:120+rng()*80, rotation:0, rotSpeed:(rng()-.5)*.4,
       platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
       inv, discovered:false, isBounty, key, regenTimer:{},
     });
@@ -965,11 +1368,10 @@ const dockingInfo = { st:null, padD:Infinity, padWorldX:0, padWorldY:0, shipSpd:
 
 function getPadPositions(st) {
   /** Returns an array of {wx, wy} for each docking pad in world space.
-   *  FIX: single canonical function — used by both draw and dock logic. */
+   *  Must exactly match drawStation's stCx/stCy/stRot calculation. */
   const isOrbiting = !st.isHome && !st.isBounty;
-  const orbitDist  = isOrbiting ? st.radius * 8 : 0;
-  // The station rotates; pads sit at orbit centre + rotated arm
-  const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;   // FIX: consistent rotation multiplier
+  const orbitDist  = isOrbiting ? st.radius * 9 : 0;
+  const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;
   const stCx    = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
   const stCy    = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
   const padDist = st.radius * 0.55;
@@ -1052,107 +1454,129 @@ function drawStation(st) {
   if (sx<-1200||sx>canvas.width+1200||sy<-1200||sy>canvas.height+1200) return;
 
   const isOrbiting = !st.isHome && !st.isBounty;
-  const orbitDist  = isOrbiting ? r*8 : 0;
+  const orbitDist  = isOrbiting ? r*9 : 0;
 
-  // ── Star + orbit ring (orbiting stations only) ──
+  // ── Star body + orbit ring (orbiting stations only) ──
   if (isOrbiting) {
-    ctx.beginPath(); ctx.arc(sx, sy, r*3, 0, Math.PI*2);
-    ctx.fillStyle = wa(PAL.warn, .1); ctx.fill();
-    ctx.strokeStyle = wa(PAL.warn, .5); ctx.lineWidth = 2; ctx.stroke();
-    ctx.font = '10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .6); ctx.textAlign = 'center';
-    ctx.fillText('STAR: ' + st.name.split('-')[0], sx, sy + r*3 + 15);
-
-    // Orbit path
+    // Star glow
+    ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.warn, .07); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.warn, .4); ctx.lineWidth = 1.5; ctx.stroke();
+    // Star label
+    ctx.font = '9px Orbitron'; ctx.fillStyle = wa(PAL.ink, .5); ctx.textAlign = 'center';
+    ctx.fillText('★ ' + st.name.split('-')[0], sx, sy + r*2.2 + 13);
+    // Orbit path (dashed ring around star)
     ctx.beginPath(); ctx.arc(sx, sy, orbitDist, 0, Math.PI*2);
-    ctx.strokeStyle = wa(PAL.ink, .05); ctx.lineWidth = 1; ctx.setLineDash([2,6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = wa(PAL.ink, .05); ctx.lineWidth = 1;
+    ctx.setLineDash([3,8]); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // ── Station body (centred on pad orbit position) ──
-  // FIX: draw station body at its actual world position, not the star centre
-  const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;  // FIX: matches getPadPositions
-  const stCx    = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
-  const stCy    = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
+  // ── Compute station body centre (orbiting stations revolve around star) ──
+  const stRot = isOrbiting ? st.rotation*3 : st.rotation*2;
+  const stCx  = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
+  const stCy  = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
   const scx = wx(stCx), scy = wy(stCy);
 
-  // Planet body (for orbiting stations)
+  // ── Planet body behind structure (orbiting only) — SMALL, drawn first ──
   if (isOrbiting) {
-    ctx.beginPath(); ctx.arc(scx, scy, r*1.5, 0, Math.PI*2);
-    ctx.fillStyle = wa(PAL.ink, .08); ctx.fill();
-    ctx.strokeStyle = wa(PAL.ink, .4); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(scx, scy, r*0.55, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.ink, .05); ctx.fill();
+    ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = 1; ctx.stroke();
   }
 
+  // ── Station structure (arms + core + pads) — all in local space ──
   ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
 
-  // Orbit ring (dashed)
+  // Outer guide ring (dashed)
   ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
-  ctx.strokeStyle = wa(PAL.ink, .15); ctx.lineWidth = .8; ctx.setLineDash([5,7]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle = wa(PAL.ink, .12); ctx.lineWidth = .8;
+  ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
 
-  // Radial arms
+  // Four radial arms
   for (let i = 0; i < 4; i++) {
     const a = (i/4)*Math.PI*2;
     const c = Math.cos(a), s = Math.sin(a);
-    ctx.beginPath(); ctx.moveTo(c*r*.2, s*r*.2); ctx.lineTo(c*r*.82, s*r*.82);
-    ctx.strokeStyle = wa(PAL.ink, .6); ctx.lineWidth = 1.2; ctx.stroke();
-    const tx = Math.cos(a+Math.PI/2)*6, ty = Math.sin(a+Math.PI/2)*6;
-    const px = c*r*.82, py = s*r*.82;
+    // Main arm strut
+    ctx.beginPath(); ctx.moveTo(c*r*.22, s*r*.22); ctx.lineTo(c*r*.78, s*r*.78);
+    ctx.strokeStyle = wa(PAL.ink, .65); ctx.lineWidth = 1.4; ctx.stroke();
+    // Arm tip bracket
+    const tx = Math.cos(a+Math.PI/2)*5, ty = Math.sin(a+Math.PI/2)*5;
+    const px = c*r*.78, py = s*r*.78;
     ctx.beginPath(); ctx.moveTo(px+tx,py+ty); ctx.lineTo(px,py); ctx.lineTo(px-tx,py-ty);
-    ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.4; ctx.stroke();
+    // Cross-brace
+    ctx.beginPath(); ctx.moveTo(c*r*.4+tx*.4,s*r*.4+ty*.4); ctx.lineTo(c*r*.4-tx*.4,s*r*.4-ty*.4);
+    ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = .7; ctx.stroke();
   }
 
   // Hexagonal core
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const a = (i/6)*Math.PI*2 - Math.PI/6;
-    const p = r*.28;
+    const p = r*.22;
     if (i===0) ctx.moveTo(Math.cos(a)*p, Math.sin(a)*p);
-    else ctx.lineTo(Math.cos(a)*p, Math.sin(a)*p);
+    else        ctx.lineTo(Math.cos(a)*p, Math.sin(a)*p);
   }
-  ctx.closePath(); ctx.fillStyle = wa(PAL.ink, .04); ctx.fill(); ctx.strokeStyle = wa(PAL.ink, .8); ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.3; ctx.stroke();
+  // Inner core dot
+  ctx.beginPath(); ctx.arc(0, 0, r*.07, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
 
-  // Docking pads (drawn at localAngle relative to stRot context)
+  // Docking pads — at arm tips, inside the guide ring
   if (st.platforms) {
     for (const p of st.platforms) {
       ctx.save(); ctx.rotate(p.localAngle); ctx.translate(r*0.55, 0);
-      ctx.beginPath(); ctx.arc(0, 0, 70, 0, Math.PI*2);
-      ctx.fillStyle = wa(PAL.safe, .08); ctx.fill();
-      ctx.strokeStyle = wa(PAL.safe, .6); ctx.lineWidth = 2; ctx.setLineDash([8,8]); ctx.stroke(); ctx.setLineDash([]);
+      // Pad circle
+      ctx.beginPath(); ctx.arc(0, 0, r*0.22, 0, Math.PI*2);
+      ctx.fillStyle = wa(PAL.safe, .06); ctx.fill();
+      ctx.strokeStyle = wa(PAL.safe, .7); ctx.lineWidth = 1.5;
+      ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+      // H-shape landing marker
+      const hw = r*0.09, hh = r*0.12;
       ctx.beginPath();
-      ctx.moveTo(-15,-20); ctx.lineTo(-15,20);
-      ctx.moveTo( 15,-20); ctx.lineTo( 15,20);
-      ctx.moveTo(-15,  0); ctx.lineTo( 15, 0);
-      ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 4; ctx.stroke();
-      ctx.font = '700 14px Orbitron'; ctx.fillStyle = wa(PAL.safe, .8); ctx.textAlign = 'center';
-      ctx.fillText('PAD', 0, -35);
+      ctx.moveTo(-hw, -hh); ctx.lineTo(-hw,  hh);
+      ctx.moveTo( hw, -hh); ctx.lineTo( hw,  hh);
+      ctx.moveTo(-hw,    0); ctx.lineTo( hw,  0);
+      ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 2; ctx.stroke();
+      // PAD label
+      ctx.font = `700 ${Math.max(7, r*0.08)}px Orbitron`;
+      ctx.fillStyle = wa(PAL.safe, .75); ctx.textAlign = 'center';
+      ctx.fillText('PAD', 0, -(r*0.22 + 4));
       ctx.restore();
     }
   }
+
   ctx.restore();
 
-  // Labels (drawn at station-body position, not star position)
+  // ── Labels ──
   const lbl = (st.isBounty?'★ ':'') + (st.isHome ? 'HOME STATION' : st.name);
   ctx.font = '500 10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
-  ctx.fillText(lbl, scx, scy - r - 10);
+  ctx.fillText(lbl, scx, scy - r - 14);
 
   // Contract destination ring
   if (activeContract && activeContract.to === st.name) {
     const pulse = .5 + .5*Math.sin(Date.now()*.005);
-    ctx.beginPath(); ctx.arc(scx, scy, r+18, 0, Math.PI*2);
-    ctx.strokeStyle = wa(PAL.accent, pulse*.6); ctx.lineWidth = 1; ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(scx, scy, r+20, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.accent, pulse*.6); ctx.lineWidth = 1;
+    ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
     ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, .9); ctx.textAlign = 'center';
-    ctx.fillText('▼ DESTINATION', scx, scy - r - 24);
+    ctx.fillText('▼ DESTINATION', scx, scy - r - 26);
   }
 
-  // Docking indicator
+  // Docking status indicator
   if (dockingInfo.st === st) {
     ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
     if (dockingInfo.padD < CFG.DOCK_PAD_R) {
       if (dockingInfo.shipSpd > CFG.DOCK_MAX_SPD) {
-        ctx.fillStyle = PAL.warn; ctx.fillText('SPEED TOO HIGH', scx, scy + r + 16);
+        ctx.fillStyle = PAL.warn; ctx.fillText('SPEED TOO HIGH — BRAKE [S]', scx, scy + r + 18);
       } else {
-        ctx.fillStyle = PAL.safe; ctx.fillText('◆ DOCKING PAD ALIGNED [E]', scx, scy + r + 16);
+        ctx.fillStyle = PAL.safe; ctx.fillText('◆ DOCKING PAD ALIGNED · [E] DOCK', scx, scy + r + 18);
       }
-    } else if (dockingInfo.padD < r*1.5) {
-      ctx.fillStyle = wa(PAL.ink3, .8); ctx.fillText('ALIGN WITH PAD', scx, scy + r + 15);
+    } else if (dockingInfo.padD < r*2.5) {
+      ctx.fillStyle = wa(PAL.ink3, .8); ctx.fillText('ALIGN WITH PAD', scx, scy + r + 17);
     }
   }
 }
@@ -1625,7 +2049,10 @@ function updateMeteors(dt) {
   meteorTimer += dt;
   if (meteorTimer > CFG.METEOR_SPAWN_INTERVAL_MIN + Math.random()*(CFG.METEOR_SPAWN_INTERVAL_MAX-CFG.METEOR_SPAWN_INTERVAL_MIN)) {
     meteorTimer = 0;
-    if (meteors.filter(m=>!m.dead).length < CFG.METEOR_CAP) for (let i=0;i<3+Math.floor(Math.random()*4);i++) spawnMeteor();
+    if (meteors.filter(m=>!m.dead).length < CFG.METEOR_CAP) {
+      const spawnCount = CFG.METEOR_SPAWN_COUNT_MIN + Math.floor(Math.random()*(CFG.METEOR_SPAWN_COUNT_MAX - CFG.METEOR_SPAWN_COUNT_MIN + 1));
+      for (let i=0; i<spawnCount; i++) spawnMeteor();
+    }
   }
   for (const m of meteors) {
     if (m.dead) continue;
@@ -2096,7 +2523,7 @@ function updateHUD() {
   const deg = ((ship.angle*180/Math.PI)%360+360)%360;
   document.getElementById('hud-x').textContent     = fmtDist(Math.abs(Math.floor(ship.x))) + (ship.x<0?' W':' E');
   document.getElementById('hud-y').textContent     = fmtDist(Math.abs(Math.floor(ship.y))) + (ship.y<0?' N':' S');
-  document.getElementById('hud-spd').textContent   = Math.floor(spd) + ' ls/s';
+  document.getElementById('hud-spd').textContent   = Math.floor(spd) + ' ls/s' + (ship.speedMode === 'COSMIC' && ship.cosmicBoostTime > 0.1 ? ' ×' + Math.pow(2, ship.cosmicBoostTime*1.1).toFixed(1) : '');
   document.getElementById('hud-hdg').textContent   = Math.floor(deg);
   document.getElementById('hud-fuel').textContent  = Math.floor(ship.fuel);
   document.getElementById('hud-hull').textContent  = Math.floor(ship.hull);
@@ -2116,7 +2543,8 @@ function updateHUD() {
   shEl.className   = 'val' + (ship.shieldActive?' ok':'');
   const inS = inSafe(ship.x, ship.y);
   const zEl = document.getElementById('hud-zone');
-  zEl.textContent  = inS ? 'SAFE ZONE' : 'OPEN SPACE';
+  const modeTxt = ship.speedMode === 'COSMIC' ? 'COSMIC SPEED' : 'MANEUVERING';
+  zEl.textContent  = inS ? 'SAFE ZONE · ' + modeTxt : modeTxt;
   zEl.className    = inS ? 'ok dim' : 'dim';
   document.getElementById('hud-karma').textContent = (karma>=0?'+':'') + karma;
   document.getElementById('hud-cr').textContent    = ship.credits.toLocaleString();
@@ -2137,7 +2565,7 @@ function addLog(msg) {
 // ── Controls hint ──
 
 let ctrlVisible = true;
-const CTRLS = [{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser'},{k:'Q',d:'Shield'},{k:'E',d:'Dock'},{k:'M',d:'Map'},{k:'ESC',d:'Pause'},{k:'H',d:'Hide'},{k:'O',d:'+1000 CR'}];
+const CTRLS = [{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser'},{k:'Q',d:'Shield'},{k:'E',d:'Dock'},{k:'1/2',d:'Speed Mode'},{k:'J',d:'Hyperdrive'},{k:'M',d:'Map'},{k:'ESC',d:'Pause'},{k:'H',d:'Hide'}];
 
 function drawControls() {
   if (!ctrlVisible || mmCv.classList.contains('fullscreen')) return;
@@ -2174,11 +2602,12 @@ function showEventBanner(title, sub, duration=4000) {
   b.style.opacity='1'; clearTimeout(b._t); b._t=setTimeout(()=>b.style.opacity='0', duration);
 }
 
-/** Returns true if any blocking modal (trade, distress, death, stranded, pause) is open */
+/** Returns true if any blocking modal (trade, distress, death, stranded, pause, hyperdrive) is open */
 function modalOpen() {
   return document.getElementById('trade-modal').classList.contains('open')
       || document.getElementById('distress-modal').classList.contains('open')
       || document.getElementById('death-screen').classList.contains('open')
+      || document.getElementById('hyperdrive-modal').classList.contains('open')
       || strandedOpen()
       || isPaused;
 }
@@ -2229,6 +2658,9 @@ document.addEventListener('keydown', e => {
   if (e.code==='KeyH') ctrlVisible=!ctrlVisible;
   if (e.code==='KeyO') { ship.credits+=1000; addLog('+ 1000 CREDITS [CHEAT]'); }
   if (e.code==='KeyE') tryDock();
+  if (e.code==='KeyJ') openHyperdriveMenu();
+  if (e.code==='Digit1') setSpeedMode('MANEUVER');
+  if (e.code==='Digit2') setSpeedMode('COSMIC');
   if (e.code==='KeyQ') {
     if (!ship.hasShield)        addLog('Buy shield at station first');
     else if (ship.energy<20)    addLog('Insufficient energy');
@@ -2248,6 +2680,10 @@ function toggleMap() {
 
 function togglePause() {
   if (document.getElementById('death-screen').classList.contains('open')) return;
+  if (document.getElementById('hyperdrive-modal').classList.contains('open')) {
+    document.getElementById('hyperdrive-modal').classList.remove('open');
+    return;
+  }
   isPaused=!isPaused;
   const m=document.getElementById('pause-modal');
   if (isPaused) {
@@ -2354,6 +2790,7 @@ function loop(ts) {
     updateShip(dt); updateEnemies(dt); updateMeteors(dt);
     updateBlackHoles(dt); updateSwarms(dt); updateStranded(dt);
     updateBoss(dt); updateBossProj(dt); tickShield(dt); regenStations(dt);
+    updateWormhole(dt);
 
     // FIX: decrement drop TTL in one place only (here), not also in drawDrops
     for (let i = drops.length-1; i >= 0; i--) {
@@ -2379,9 +2816,10 @@ document.getElementById('boot-start').addEventListener('click', () => {
     document.getElementById('boot').style.display = 'none';
     addLog('System online · SEED:' + SEED.toString(16).toUpperCase());
     addLog('Milky Way sector · coords in light-seconds');
-    addLog('WASD: thrust/brake · A/D: rotate');
-    addLog('SPACE: laser · Q: shield · E: dock (align pad, slow down)');
-    addLog('Acquire cargo, accept contracts, deliver for credits');
+    addLog('WASD: thrust/brake · A/D: rotate · SPACE: laser');
+    addLog('1: Maneuvering Mode · 2: Cosmic Speed · J: Hyperdrive');
+    addLog('E: dock (align pad, low speed) · Q: shield');
+    addLog('Hyperdrive fast-travels to stations · costs 2/3 fuel');
     setTimeout(() => { spawnEnemy(); addLog('⚠ Pirate detected'); }, 9000);
     lastTime = performance.now();
     requestAnimationFrame(loop);
