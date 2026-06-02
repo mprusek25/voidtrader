@@ -1,9 +1,16 @@
+Here is the complete, updated HTML file for **VOIDTRADER**.
+
+I have implemented a modular `GamepadController` that handles input via the browser's Gamepad API. It features a context-aware state machine that maps controls seamlessly across three main states: **Gameplay**, **Map Mode**, and **UI/Station Mode**.
+
+A new `.gp-focus` CSS class is used to visually highlight interactive elements in the menus, and the minimap drawing logic has been updated to support panning with the Left Joystick.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VOIDTRADER · WHITE</title>
+<title>VOIDTRADER · WHITE (XBOX CONTROLLER EDITION)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -38,6 +45,13 @@ body{
 }
 
 #canvas{display:block;position:fixed;top:0;left:0;z-index:1;}
+
+/* Gamepad Focus State */
+.gp-focus {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px !important;
+  background: rgba(200, 60, 0, 0.08) !important;
+}
 
 /* ── HUD panels ── */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
@@ -331,7 +345,6 @@ body{
 <canvas id="minimap" width="180" height="180"></canvas>
 <div id="minimap-label">MAP · [M]</div>
 
-<!-- Speed Mode HUD (replaces old contract-hud position, placed separately) -->
 <div id="speed-mode-hud">
   <button class="smode-btn active" id="smode-maneuver" onclick="setSpeedMode('MANEUVER')">MANEUVERING</button>
   <button class="smode-btn" id="smode-cosmic" onclick="setSpeedMode('COSMIC')">COSMIC</button>
@@ -339,7 +352,6 @@ body{
   <span id="smode-label">MANEUVERING</span>
 </div>
 
-<!-- Hyperdrive Destination Modal -->
 <div id="hyperdrive-modal">
   <div id="hyperdrive-box">
     <h2>HYPERDRIVE · DESTINATION SELECT</h2>
@@ -350,20 +362,16 @@ body{
   </div>
 </div>
 
-<!-- Trajectory Warning -->
 <div id="traj-warning"><div class="tw-box">⚠ IMPACT TRAJECTORY DETECTED ⚠</div></div>
 
-<!-- Wormhole overlay canvas -->
 <div id="wormhole-overlay"><canvas id="wormhole-canvas"></canvas></div>
 
-<!-- Contract HUD strip -->
 <div id="contract-hud">
   <div class="ct">ACTIVE CONTRACT</div>
   <div class="cc" id="ch-route">— · —</div>
   <div class="cd" id="ch-info">No active contract</div>
 </div>
 
-<!-- Touch controls -->
 <div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-knob"></div></div>
 <div id="touch-btns">
   <div id="btn-fire" class="tch-btn">LASER</div>
@@ -382,7 +390,6 @@ body{
   <p style="color:#333;margin-top:10px">[M] CLOSE · SCROLL ZOOM</p>
 </div>
 
-<!-- HUD -->
 <div id="hud">
   <div class="hp" id="hp-nav" data-l="NAV · MILKY WAY SECTOR">
     <div>RA  <span class="val" id="hud-x">0 ls E</span></div>
@@ -420,7 +427,6 @@ body{
   </svg>
 </div>
 
-<!-- Trade modal -->
 <div id="trade-modal"><div id="trade-box">
   <h2 id="trade-title">DOCKING INTERFACE</h2>
   <div class="trow th"><span>COMMODITY</span><span>STOCK</span><span>BUY/u</span><span>SELL/u</span><span>OWNED</span><span></span></div>
@@ -448,7 +454,6 @@ body{
   <button id="trade-close">[ UNDOCK ]</button>
 </div></div>
 
-<!-- Distress modal -->
 <div id="distress-modal"><div id="distress-box">
   <h2>⚠ FUEL DEPLETED</h2>
   <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:rgba(0,0,0,.4)">Caution: signal attracts hostiles.</span></p>
@@ -456,7 +461,6 @@ body{
   <button class="dbtn er" id="btn-drift">DRIFT (risky)</button>
 </div></div>
 
-<!-- Stranded modal -->
 <div id="stranded-modal"><div id="sbox">
   <h2>⚠ DISTRESS BEACON</h2>
   <div style="font-size:9px;color:rgba(0,0,0,.3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
@@ -467,7 +471,6 @@ body{
   <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.25)">[ IGNORE ]</button>
 </div></div>
 
-<!-- Death screen -->
 <div id="death-screen">
   <h1>SHIP DESTROYED</h1>
   <p>Respawning at HOME-STATION · 25% cargo jettisoned</p>
@@ -477,7 +480,6 @@ body{
 <div id="msg-overlay"></div>
 <div id="event-banner"></div>
 
-<!-- Pause modal -->
 <div id="pause-modal"><div id="pause-box">
   <h2>PAUSED</h2>
   <div class="sub">SYSTEM HALTED · [ESC] RESUME</div>
@@ -493,7 +495,6 @@ body{
   <button class="pbtn dim" id="btn-pause-reset">[ ERASE SAVE ]</button>
 </div></div>
 
-<!-- Boot screen -->
 <div id="boot">
   <h1>VOIDTRADER</h1>
   <div class="sub">MILKY WAY COMMERCE · WHITE SECTOR EDITION v2.1</div>
@@ -543,6 +544,7 @@ body{
 //   ## SAVE / LOAD     — localStorage save system
 //   ## KEYBOARD        — key bindings
 //   ## TOUCH           — mobile joystick + buttons
+//   ## GAMEPAD         — xbox controller mapping & inputs
 //   ## MAIN LOOP       — requestAnimationFrame loop
 //   ## BOOT            — boot screen handler
 //
@@ -550,101 +552,80 @@ body{
 
 
 // ── ## CONFIG ───────────────────────────────────────────────────────────────
-// All gameplay numbers in one place — easy for AI to locate and edit.
 
 const CFG = {
-  // World
-  CHUNK:       8000,    // world-space distance between station slots
-  RADAR:       6000,    // discovery radius
-  DOCK_PAD_R:  70,      // max distance from pad centre to dock
-  DOCK_MAX_SPD:20,      // max speed to dock
-  SAFE_ZONE:   1500,    // radius around stations where pirates don't attack
-  GRAV_RADIUS: 1500,    // radius of station gravity-drag
-  CRUISE_SPD:  180,     // minimum speed in open space (base / maneuvering mode)
+  CHUNK:       8000,
+  RADAR:       6000,
+  DOCK_PAD_R:  70,
+  DOCK_MAX_SPD:20,
+  SAFE_ZONE:   1500,
+  GRAV_RADIUS: 1500,
+  CRUISE_SPD:  180,
 
-  // ── Speed Modes ──
-  // MANEUVER: responsive combat/docking mode — fast enough to fight, slow enough to dock
-  MANEUVER_THRUST:   520,    // was 160 — accelerates quickly for evasion
-  MANEUVER_MAX_SPD:  320,    // was 90 — fast enough for combat, slow enough to dock
+  MANEUVER_THRUST:   520,
+  MANEUVER_MAX_SPD:  320,
   MANEUVER_ROT:      3.4,
-  MANEUVER_CRUISE:   0,     // no cruise floor — full control
+  MANEUVER_CRUISE:   0,
 
-  // COSMIC: high speed cruising
   COSMIC_THRUST:     420,
   COSMIC_MAX_SPD:    1200,
   COSMIC_ROT:        2.0,
-  COSMIC_CRUISE:     380,   // speed floor in open space
+  COSMIC_CRUISE:     380,
 
-  // Trajectory warning: look-ahead distance at cosmic speed (world units)
   TRAJ_WARN_DIST:    1800,
+  HYPERDRIVE_FUEL_COST_FRAC: 2/3,
+  HYPERDRIVE_SAFE_RADIUS:    900,
 
-  // Hyperdrive
-  HYPERDRIVE_FUEL_COST_FRAC: 2/3,   // fraction of FUEL_MAX consumed per jump
-  HYPERDRIVE_SAFE_RADIUS:    900,    // spawn radius around target station after jump
-
-  // Fuel
   FUEL_MAX:    100,
-  FUEL_BURN:   0.35,    // per second at thrust
+  FUEL_BURN:   0.35,
 
-  // Ship (base — overridden per speed mode)
   SHIP_THRUST: 280,
   SHIP_MAX_SPD:440,
   SHIP_ROT:    2.6,
 
-  // Laser
-  LASER_HEAT:  14,      // heat per shot
-  LASER_ENERGY:6,       // energy per shot
-  LASER_CD:    0.18,    // cooldown seconds
+  LASER_HEAT:  14,
+  LASER_ENERGY:6,
+  LASER_CD:    0.18,
   LASER_LEN:   700,
 
-  // Shield
   SHIELD_COST:   5000,
-  SHIELD_DRAIN:  35,    // energy per second
+  SHIELD_DRAIN:  35,
 
-  // Commerce
   CARGO_MAX:   50,
-  FUEL_PRICE:  12,      // base buy price
-  SELL_RATIO:  0.80,    // sell price = buy × this
+  FUEL_PRICE:  12,
+  SELL_RATIO:  0.80,
 
-  // Enemies
   ENEMY_CAP:   4,
   ENEMY_SPAWN_INTERVAL: 14,
 
-  // Meteors — drastically reduced for realistic space emptiness
-  METEOR_CAP:  3,                    // was 12 — space is vast and empty
-  METEOR_SPAWN_INTERVAL_MIN: 18,     // was 2.8 — very rare encounters
-  METEOR_SPAWN_INTERVAL_MAX: 40,     // was 5.8
-  METEOR_SPAWN_COUNT_MIN:    1,      // spawn 1 at a time (was 3-7)
+  METEOR_CAP:  3,
+  METEOR_SPAWN_INTERVAL_MIN: 18,
+  METEOR_SPAWN_INTERVAL_MAX: 40,
+  METEOR_SPAWN_COUNT_MIN:    1,
   METEOR_SPAWN_COUNT_MAX:    2,
 
-  // Swarms
   SWARM_CAP:   3,
-  SWARM_WARN:  5,       // seconds of warning before swarm arrives
+  SWARM_WARN:  5,
 
-  // Black holes
   BH_CAP:      3,
   BH_PULL:     600,
   BH_ESC:      180,
 
-  // Stranded ships
   STRANDED_CAP:3,
   STRANDED_TTL:120,
   PARTS_REWARD:1500,
   ESCORT_REWARD:2000,
 
-  // Boss
   BOSS_HULL:   600,
   BOUNTY_COST: 2000,
   BOUNTY_REWARD:15000,
 
-  // Starting credits
   START_CREDITS: 1500,
 };
 
 
 // ── ## UTILS ────────────────────────────────────────────────────────────────
 
-/** Seeded PRNG — returns 0..1 */
 function makePRNG(seed) {
   let s = seed >>> 0;
   return () => {
@@ -655,7 +636,6 @@ function makePRNG(seed) {
   };
 }
 
-/** Hex colour → rgba() string */
 function wa(hex, a) {
   if (!hex || hex.length < 7) return `rgba(0,0,0,${a})`;
   const r = parseInt(hex.slice(1,3), 16);
@@ -664,7 +644,6 @@ function wa(hex, a) {
   return `rgba(${r},${g},${b},${a})`;
 }
 
-/** Segment vs circle collision — returns true if segment (x1,y1)→(x2,y2) intersects circle (cx,cy,cr) */
 function lineCircle(x1, y1, x2, y2, cx, cy, cr) {
   const dx = x2-x1, dy = y2-y1, fx = x1-cx, fy = y1-cy;
   const a = dx*dx + dy*dy;
@@ -677,14 +656,12 @@ function lineCircle(x1, y1, x2, y2, cx, cy, cr) {
   return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
 }
 
-/** Format a game-units distance nicely */
 function fmtDist(d) {
   if (d < 1000)    return Math.floor(d) + ' ls';
   if (d < 1000000) return (d/1000).toFixed(2) + ' kls';
   return (d/31557.6).toFixed(1) + ' ly';
 }
 
-/** Signed angle difference clamped to (-π, π) */
 function angleDiff(a, b) {
   let d = a - b;
   while (d >  Math.PI) d -= Math.PI*2;
@@ -702,7 +679,6 @@ const mmx     = mmCv.getContext('2d');
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const isMobile= isTouch && window.innerWidth <= 1024;
 
-// Palette — matches CSS variables
 const PAL = {
   bg:'#f5f3ee', ink:'#000000', ink2:'#555555', ink3:'#999999', ink4:'#cccccc',
   safe:'#006600', warn:'#cc6600', danger:'#cc0000', accent:'#cc4400',
@@ -727,12 +703,8 @@ function resize() {
 window.addEventListener('resize', () => { resize(); ctx.resetTransform?.(); resize(); });
 resize();
 
-// Camera — always follows ship
 const cam = { x:0, y:0 };
-
-/** World x → screen x */
 const wx = x => canvas.width/2  + (x - cam.x);
-/** World y → screen y */
 const wy = y => canvas.height/2 + (y - cam.y);
 
 
@@ -750,7 +722,6 @@ function buildGalaxy() {
   gx.fillStyle = '#f5f3ee';
   gx.fillRect(0, 0, GW, GH);
 
-  // Galactic arms (dust lanes)
   for (let arm = 0; arm < 5; arm++) {
     const armAngle = (arm/5) * Math.PI*2;
     for (let i = 0; i < 1800; i++) {
@@ -767,7 +738,6 @@ function buildGalaxy() {
     }
   }
 
-  // Dense core glow
   for (let i = 0; i < 3000; i++) {
     const a = rng()*Math.PI*2, r = Math.pow(rng(), 2)*200;
     const px = GW/2 + Math.cos(a)*r, py = GH/2 + Math.sin(a)*r;
@@ -776,7 +746,6 @@ function buildGalaxy() {
     gx.fill();
   }
 
-  // Star dots
   for (let i = 0; i < 4000; i++) {
     const px = rng()*GW, py = rng()*GH;
     const sz = rng() < .04 ? rng()*1.4+.6 : rng()*.6+.15;
@@ -787,7 +756,6 @@ function buildGalaxy() {
   galaxyCanvas = gc;
 }
 
-// Parallax star layers (drawn live each frame — cheap, no texture)
 const starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
   const rng   = makePRNG(SEED + li*777);
   const count = [40, 60, 80, 35][li];
@@ -803,7 +771,6 @@ const starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
 function drawGalaxy() {
   if (!galaxyCanvas) return;
   const GW = galaxyCanvas.width, GH = galaxyCanvas.height;
-  // FIX: only draw 2×2 tiles (enough to cover any screen without seam)
   const ox = (((-cam.x*0.02) % GW) + GW) % GW;
   const oy = (((-cam.y*0.02) % GH) + GH) % GH;
   ctx.globalAlpha = 0.6;
@@ -855,18 +822,15 @@ const ship = {
   invincible:0,
   hasShield: false,
   shieldActive: false,
-  speedMode: 'MANEUVER',   // 'MANEUVER' | 'COSMIC'
-  cosmicBoostTime: 0,      // seconds W has been held in COSMIC mode — drives exp acceleration
+  speedMode: 'MANEUVER',
+  cosmicBoostTime: 0,
 };
-
-// ── Speed Mode System ────────────────────────────────────────────────────────
 
 function setSpeedMode(mode) {
   if (mode === ship.speedMode) return;
   ship.speedMode = mode;
-  ship.cosmicBoostTime = 0;  // reset boost ramp on mode switch
+  ship.cosmicBoostTime = 0;
   applySpeedModeStats();
-  // Update HUD buttons
   document.getElementById('smode-maneuver').classList.toggle('active', mode === 'MANEUVER');
   document.getElementById('smode-cosmic').classList.toggle('active', mode === 'COSMIC');
   document.getElementById('smode-label').textContent = mode === 'MANEUVER' ? 'MANEUVERING' : 'COSMIC SPEED';
@@ -884,15 +848,9 @@ function applySpeedModeStats() {
     ship.rotSpeed = CFG.COSMIC_ROT;
   }
 }
-
-// Apply initial stats
 applySpeedModeStats();
 
-// ── Trajectory Warning System ─────────────────────────────────────────────────
-
 let _trajWarnActive = false;
-let _trajWarnSound  = null;   // AudioContext beep
-
 function checkTrajectoryWarning() {
   if (ship.speedMode !== 'COSMIC') { setTrajWarn(false); return; }
   const spd = Math.hypot(ship.vx, ship.vy);
@@ -909,7 +867,6 @@ function checkTrajectoryWarning() {
     if (lineCircle(x1, y1, x2, y2, m.x, m.y, m.r + 30)) { hit = true; break; }
   }
   if (!hit) {
-    // Also check swarm rocks
     for (const s of swarms) {
       if (s.state !== 'active') continue;
       for (const r of s.rocks) {
@@ -928,7 +885,6 @@ function setTrajWarn(active) {
   if (active) playTrajBeep();
 }
 
-let _beepTimer = 0;
 function playTrajBeep() {
   try {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -942,9 +898,7 @@ function playTrajBeep() {
   } catch(e) {}
 }
 
-// ── Wormhole / Hyperdrive Visual System ──────────────────────────────────────
-
-let wormholeState = null; // { phase:'enter'|'exit', timer:0, duration:1.2, onComplete:fn }
+let wormholeState = null;
 const wormholeCv  = document.getElementById('wormhole-canvas');
 const wormholeCtx = wormholeCv.getContext('2d');
 
@@ -967,11 +921,8 @@ function updateWormhole(dt) {
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
 
   wormholeCtx.clearRect(0, 0, wormholeCv.width, wormholeCv.height);
-
-  // Progress: enter ramps in (0→1), exit ramps out (1→0)
   const progress = wormholeState.phase === 'enter' ? Math.min(t, 1) : Math.max(1 - t, 0);
 
-  // Black tunnel fill
   const maxR = Math.hypot(cx, cy) * 1.4;
   const innerR = progress * maxR * 0.6;
   const outerR = progress * maxR * 1.1;
@@ -982,7 +933,6 @@ function updateWormhole(dt) {
   wormholeCtx.beginPath(); wormholeCtx.arc(cx, cy, outerR, 0, Math.PI * 2);
   wormholeCtx.fillStyle = grad; wormholeCtx.fill();
 
-  // Spiral rings
   const now = Date.now() * 0.001;
   const ringCount = 14;
   for (let i = 0; i < ringCount; i++) {
@@ -995,7 +945,6 @@ function updateWormhole(dt) {
     wormholeCtx.strokeStyle = `rgba(100,80,60,${alpha})`;
     wormholeCtx.lineWidth   = 1 + frac * 2;
     wormholeCtx.stroke();
-    // Bright accent ring
     if (i % 3 === 0) {
       wormholeCtx.beginPath();
       wormholeCtx.arc(cx, cy, r * 0.95, spin + 0.4, spin + 0.85);
@@ -1005,7 +954,6 @@ function updateWormhole(dt) {
     }
   }
 
-  // Central glow
   if (progress > 0.1) {
     const cg = wormholeCtx.createRadialGradient(cx, cy, 0, cx, cy, innerR * 0.25);
     cg.addColorStop(0, `rgba(255,200,100,${progress * 0.5})`);
@@ -1014,7 +962,6 @@ function updateWormhole(dt) {
     wormholeCtx.fillStyle = cg; wormholeCtx.fill();
   }
 
-  // Radial speed lines (streaking stars)
   for (let i = 0; i < 60; i++) {
     const a   = (i / 60) * Math.PI * 2 + now * 0.5;
     const r1  = innerR * 0.3 * (0.5 + 0.5 * Math.sin(a * 3 + now));
@@ -1027,7 +974,6 @@ function updateWormhole(dt) {
     wormholeCtx.stroke();
   }
 
-  // On completion callback
   if (wormholeState.timer >= wormholeState.duration) {
     if (wormholeState.onComplete) wormholeState.onComplete();
     if (wormholeState.phase === 'exit') {
@@ -1040,8 +986,6 @@ function updateWormhole(dt) {
   }
 }
 
-// ── Hyperdrive Menu ───────────────────────────────────────────────────────────
-
 function openHyperdriveMenu() {
   if (isPaused || ship.isDead) return;
   const jumpCost = Math.ceil(CFG.FUEL_MAX * CFG.HYPERDRIVE_FUEL_COST_FRAC);
@@ -1050,7 +994,6 @@ function openHyperdriveMenu() {
   const canJump = ship.fuel >= jumpCost;
   document.getElementById('hd-no-fuel-msg').style.display = canJump ? 'none' : 'block';
 
-  // Build destination list — all discovered stations
   const destList = document.getElementById('hyperdrive-dest-list');
   destList.innerHTML = '';
   const stations = [homeStation, ...Array.from(stCache.values()).filter(s => s && s.discovered && s !== homeStation)];
@@ -1062,7 +1005,7 @@ function openHyperdriveMenu() {
       if (!st) return;
       const dist    = Math.hypot(ship.x - st.x, ship.y - st.y);
       const isCur   = dist < 200;
-      if (isCur) return; // Don't jump to current location
+      if (isCur) return;
       const div = document.createElement('div');
       div.className = 'hd-dest' + (!canJump ? ' no-fuel' : '');
       div.innerHTML = `<span class="hd-name">${st.isHome ? 'HOME STATION' : st.name}</span>
@@ -1085,9 +1028,7 @@ function initiateHyperdrive(targetStation) {
   addLog('HYPERDRIVE ENGAGED · JUMP TO ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
   showEventBanner('HYPERDRIVE JUMP', 'Engaging wormhole · brace for transit');
 
-  // Play entry wormhole, then teleport, then play exit wormhole
   startWormhole('enter', () => {
-    // Teleport: spawn at random position around target station at safe radius
     const jumpAngle = Math.random() * Math.PI * 2;
     ship.x = targetStation.x + Math.cos(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
     ship.y = targetStation.y + Math.sin(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
@@ -1099,7 +1040,6 @@ function initiateHyperdrive(targetStation) {
       if (targetStation.key) discovered.add(targetStation.key);
     }
     addLog('Transit complete · arrived near ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
-    // Short pause then play exit animation
     setTimeout(() => startWormhole('exit', null), 60);
   });
 }
@@ -1113,17 +1053,14 @@ const cargoTotal = () => Object.values(ship.cargo).reduce((a,b)=>a+b, 0);
 function updateShip(dt) {
   if (ship.isDead || modalOpen()) return;
 
-  // Rotation
   if (keys['KeyA'] || keys['ArrowLeft'])  ship.angle -= ship.rotSpeed * dt;
   if (keys['KeyD'] || keys['ArrowRight']) ship.angle += ship.rotSpeed * dt;
 
-  // Thrust — with exponential boost in COSMIC mode
   const thrusting = (keys['KeyW'] || keys['ArrowUp']) && ship.fuel > 0;
   if (thrusting) {
     if (ship.speedMode === 'COSMIC') {
-      // Exponential boost: ramps from 1x up to ~8x thrust over ~4 seconds of held W
       ship.cosmicBoostTime = Math.min(ship.cosmicBoostTime + dt, 5.0);
-      const boostMult = Math.pow(2.0, ship.cosmicBoostTime * 1.1); // 2^(t*1.1): 1x at t=0, ~8x at t=3s, ~32x at t=5s
+      const boostMult = Math.pow(2.0, ship.cosmicBoostTime * 1.1);
       ship.vx += Math.sin(ship.angle) * ship.thrust * boostMult * dt;
       ship.vy -= Math.cos(ship.angle) * ship.thrust * boostMult * dt;
     } else {
@@ -1132,20 +1069,16 @@ function updateShip(dt) {
     }
     ship.fuel = Math.max(0, ship.fuel - CFG.FUEL_BURN * dt);
   } else {
-    // Decay boost timer when not thrusting
     ship.cosmicBoostTime = Math.max(0, ship.cosmicBoostTime - dt * 2.5);
   }
 
-  // Brake
   if (keys['KeyS'] || keys['ArrowDown']) {
     ship.vx *= Math.pow(.88, dt*60);
     ship.vy *= Math.pow(.88, dt*60);
   }
 
-  // Fire laser
   if (keys['Space']) fireLaser();
 
-  // Gravity drag near stations
   let nearestStDist = Infinity;
   for (const st of allNearby()) {
     const d = Math.hypot(ship.x-st.x, ship.y-st.y);
@@ -1159,11 +1092,9 @@ function updateShip(dt) {
     ship.vy *= Math.pow(dm, dt*60);
   }
 
-  // Speed cap
   const spd = Math.hypot(ship.vx, ship.vy);
   if (spd > ship.maxSpeed) { ship.vx=(ship.vx/spd)*ship.maxSpeed; ship.vy=(ship.vy/spd)*ship.maxSpeed; }
 
-  // Cruise speed in open space — mode dependent
   const cruiseFloor = ship.speedMode === 'COSMIC' ? CFG.COSMIC_CRUISE : CFG.MANEUVER_CRUISE;
   if (!inGrav && !(keys['KeyS'] || keys['ArrowDown']) && cruiseFloor > 0) {
     if (spd < cruiseFloor && spd > 5) {
@@ -1174,7 +1105,6 @@ function updateShip(dt) {
       ship.vy = -Math.cos(ship.angle) * cruiseFloor;
     }
   }
-  // In MANEUVER mode — allow ship to slow naturally but not too fast
   if (ship.speedMode === 'MANEUVER' && !inGrav && !(keys['KeyS'] || keys['ArrowDown']) && !thrusting) {
     ship.vx *= Math.pow(0.992, dt * 60);
     ship.vy *= Math.pow(0.992, dt * 60);
@@ -1185,7 +1115,6 @@ function updateShip(dt) {
   ship.y += ship.vy * dt;
   cam.x = ship.x; cam.y = ship.y;
 
-  // Cooldowns / regen
   if (ship.laserCooldown > 0) ship.laserCooldown -= dt;
   if (ship.laserBeam) { ship.laserBeam.ttl -= dt; if (ship.laserBeam.ttl <= 0) ship.laserBeam = null; }
   ship.heat   = Math.max(0, ship.heat - 16*dt);
@@ -1193,7 +1122,6 @@ function updateShip(dt) {
   if (ship.heat >= 100) ship.laserCooldown = Math.max(ship.laserCooldown, 2.2);
   if (ship.invincible > 0) ship.invincible -= dt;
 
-  // Discover nearby stations
   for (const [ccx, ccy] of visChunks(2)) {
     const st = getStation(ccx, ccy);
     if (st && !st.discovered && Math.hypot(ship.x-st.x, ship.y-st.y) < CFG.RADAR*.6) {
@@ -1208,12 +1136,10 @@ function updateShip(dt) {
   checkTrajectoryWarning();
 }
 
-/** Draw the player or enemy ship at world position sx,sy */
 function drawShipAt(s, sx, sy, col, isPlayer) {
   col = col || PAL.ink;
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.angle);
 
-  // Engine plume — grows with cosmic boost
   if (isPlayer && (keys['KeyW']||keys['ArrowUp']) && s.fuel > 0) {
     const f  = .7 + Math.random()*.3;
     const boostScale = s.speedMode === 'COSMIC' ? 1 + s.cosmicBoostTime * 0.7 : 1;
@@ -1227,7 +1153,6 @@ function drawShipAt(s, sx, sy, col, isPlayer) {
     ctx.strokeStyle = wa(PAL.ink, .75*f);  ctx.lineWidth = 1.2;  ctx.stroke();
   }
 
-  // Fuselage (ED-inspired angular silhouette)
   ctx.beginPath();
   ctx.moveTo(0,-22); ctx.lineTo(4,-12); ctx.lineTo(13,7); ctx.lineTo(8,14);
   ctx.lineTo(4,9);   ctx.lineTo(0,16);  ctx.lineTo(-4,9); ctx.lineTo(-8,14);
@@ -1235,15 +1160,12 @@ function drawShipAt(s, sx, sy, col, isPlayer) {
   ctx.fillStyle = wa(col, .05); ctx.fill();
   ctx.strokeStyle = col; ctx.lineWidth = isPlayer ? 1.4 : 1; ctx.stroke();
 
-  // Cockpit
   ctx.beginPath(); ctx.moveTo(-2.5,-13); ctx.lineTo(0,-20); ctx.lineTo(2.5,-13);
   ctx.strokeStyle = isPlayer ? PAL.accent : wa(col, .6); ctx.lineWidth = .9; ctx.stroke();
 
-  // Wing detail
   ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(11,5); ctx.moveTo(-4,-10); ctx.lineTo(-11,5);
   ctx.strokeStyle = wa(col, .3); ctx.lineWidth = .7; ctx.stroke();
 
-  // Invincibility ring
   if (isPlayer && s.invincible > 0) {
     ctx.beginPath(); ctx.arc(0, 0, 27, 0, Math.PI*2);
     ctx.strokeStyle = wa(PAL.ink, .2 + .15*Math.sin(Date.now()*.01));
@@ -1266,7 +1188,6 @@ function drawVelVec() {
 function killShip() {
   if (ship.isDead) return;
   ship.isDead = true;
-  // Jettison 25% of each cargo type
   for (const [g, q] of Object.entries(ship.cargo)) {
     const loss = Math.ceil(q*.25);
     ship.cargo[g] = q - loss;
@@ -1295,6 +1216,8 @@ const GOODS_BASE = { ORE:45, TECH:220, FOOD:8, MEDS:90, PARTS:130 };
 const stCache   = new Map();
 const discovered= new Set();
 let   mmZoom    = 1;
+let   mapPanX   = 0;
+let   mapPanY   = 0;
 
 function freshHome() {
   return {
@@ -1331,14 +1254,12 @@ function getStation(cx, cy) {
   return stCache.get(key);
 }
 
-/** Chunk coords visible within r chunks of ship */
 function visChunks(r) {
   const pcx = Math.floor(ship.x/CFG.CHUNK), pcy = Math.floor(ship.y/CFG.CHUNK), out = [];
   for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) out.push([pcx+dx, pcy+dy]);
   return out;
 }
 
-/** All discovered stations near ship */
 function allNearby() {
   const list = [homeStation];
   for (const [ccx,ccy] of visChunks(3)) { const s = getStation(ccx,ccy); if (s) list.push(s); }
@@ -1363,12 +1284,9 @@ function regenStations(dt) {
 let dockedSt = null;
 let distressSent = false, fuelEmptyTimer = 0;
 
-/** Per-frame docking info — updated once then read by tryDock + drawStation */
 const dockingInfo = { st:null, padD:Infinity, padWorldX:0, padWorldY:0, shipSpd:0 };
 
 function getPadPositions(st) {
-  /** Returns an array of {wx, wy} for each docking pad in world space.
-   *  Must exactly match drawStation's stCx/stCy/stRot calculation. */
   const isOrbiting = !st.isHome && !st.isBounty;
   const orbitDist  = isOrbiting ? st.radius * 9 : 0;
   const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;
@@ -1387,7 +1305,6 @@ function updateDockingInfo() {
   dockingInfo.shipSpd = Math.hypot(ship.vx, ship.vy);
   for (const st of allNearby()) {
     if (!st) continue;
-    // Quick pre-filter: is ship anywhere near this station?
     if (Math.hypot(ship.x-st.x, ship.y-st.y) > st.radius*15) continue;
     for (const pad of getPadPositions(st)) {
       const d = Math.hypot(ship.x - pad.wx, ship.y - pad.wy);
@@ -1446,8 +1363,6 @@ function checkFuel(dt) {
   }
 }
 
-// ── Station drawing ──
-
 function drawStation(st) {
   if (!st) return;
   const sx = wx(st.x), sy = wy(st.y), r = st.radius;
@@ -1456,61 +1371,48 @@ function drawStation(st) {
   const isOrbiting = !st.isHome && !st.isBounty;
   const orbitDist  = isOrbiting ? r*9 : 0;
 
-  // ── Star body + orbit ring (orbiting stations only) ──
   if (isOrbiting) {
-    // Star glow
     ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
     ctx.fillStyle = wa(PAL.warn, .07); ctx.fill();
     ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
     ctx.strokeStyle = wa(PAL.warn, .4); ctx.lineWidth = 1.5; ctx.stroke();
-    // Star label
     ctx.font = '9px Orbitron'; ctx.fillStyle = wa(PAL.ink, .5); ctx.textAlign = 'center';
     ctx.fillText('★ ' + st.name.split('-')[0], sx, sy + r*2.2 + 13);
-    // Orbit path (dashed ring around star)
     ctx.beginPath(); ctx.arc(sx, sy, orbitDist, 0, Math.PI*2);
     ctx.strokeStyle = wa(PAL.ink, .05); ctx.lineWidth = 1;
     ctx.setLineDash([3,8]); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // ── Compute station body centre (orbiting stations revolve around star) ──
   const stRot = isOrbiting ? st.rotation*3 : st.rotation*2;
   const stCx  = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
   const stCy  = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
   const scx = wx(stCx), scy = wy(stCy);
 
-  // ── Planet body behind structure (orbiting only) — SMALL, drawn first ──
   if (isOrbiting) {
     ctx.beginPath(); ctx.arc(scx, scy, r*0.55, 0, Math.PI*2);
     ctx.fillStyle = wa(PAL.ink, .05); ctx.fill();
     ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = 1; ctx.stroke();
   }
 
-  // ── Station structure (arms + core + pads) — all in local space ──
   ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
 
-  // Outer guide ring (dashed)
   ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
   ctx.strokeStyle = wa(PAL.ink, .12); ctx.lineWidth = .8;
   ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
 
-  // Four radial arms
   for (let i = 0; i < 4; i++) {
     const a = (i/4)*Math.PI*2;
     const c = Math.cos(a), s = Math.sin(a);
-    // Main arm strut
     ctx.beginPath(); ctx.moveTo(c*r*.22, s*r*.22); ctx.lineTo(c*r*.78, s*r*.78);
     ctx.strokeStyle = wa(PAL.ink, .65); ctx.lineWidth = 1.4; ctx.stroke();
-    // Arm tip bracket
     const tx = Math.cos(a+Math.PI/2)*5, ty = Math.sin(a+Math.PI/2)*5;
     const px = c*r*.78, py = s*r*.78;
     ctx.beginPath(); ctx.moveTo(px+tx,py+ty); ctx.lineTo(px,py); ctx.lineTo(px-tx,py-ty);
     ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.4; ctx.stroke();
-    // Cross-brace
     ctx.beginPath(); ctx.moveTo(c*r*.4+tx*.4,s*r*.4+ty*.4); ctx.lineTo(c*r*.4-tx*.4,s*r*.4-ty*.4);
     ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = .7; ctx.stroke();
   }
 
-  // Hexagonal core
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
     const a = (i/6)*Math.PI*2 - Math.PI/6;
@@ -1521,27 +1423,22 @@ function drawStation(st) {
   ctx.closePath();
   ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
   ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.3; ctx.stroke();
-  // Inner core dot
   ctx.beginPath(); ctx.arc(0, 0, r*.07, 0, Math.PI*2);
   ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
 
-  // Docking pads — at arm tips, inside the guide ring
   if (st.platforms) {
     for (const p of st.platforms) {
       ctx.save(); ctx.rotate(p.localAngle); ctx.translate(r*0.55, 0);
-      // Pad circle
       ctx.beginPath(); ctx.arc(0, 0, r*0.22, 0, Math.PI*2);
       ctx.fillStyle = wa(PAL.safe, .06); ctx.fill();
       ctx.strokeStyle = wa(PAL.safe, .7); ctx.lineWidth = 1.5;
       ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
-      // H-shape landing marker
       const hw = r*0.09, hh = r*0.12;
       ctx.beginPath();
       ctx.moveTo(-hw, -hh); ctx.lineTo(-hw,  hh);
       ctx.moveTo( hw, -hh); ctx.lineTo( hw,  hh);
       ctx.moveTo(-hw,    0); ctx.lineTo( hw,  0);
       ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 2; ctx.stroke();
-      // PAD label
       ctx.font = `700 ${Math.max(7, r*0.08)}px Orbitron`;
       ctx.fillStyle = wa(PAL.safe, .75); ctx.textAlign = 'center';
       ctx.fillText('PAD', 0, -(r*0.22 + 4));
@@ -1551,12 +1448,10 @@ function drawStation(st) {
 
   ctx.restore();
 
-  // ── Labels ──
   const lbl = (st.isBounty?'★ ':'') + (st.isHome ? 'HOME STATION' : st.name);
   ctx.font = '500 10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
   ctx.fillText(lbl, scx, scy - r - 14);
 
-  // Contract destination ring
   if (activeContract && activeContract.to === st.name) {
     const pulse = .5 + .5*Math.sin(Date.now()*.005);
     ctx.beginPath(); ctx.arc(scx, scy, r+20, 0, Math.PI*2);
@@ -1566,7 +1461,6 @@ function drawStation(st) {
     ctx.fillText('▼ DESTINATION', scx, scy - r - 26);
   }
 
-  // Docking status indicator
   if (dockingInfo.st === st) {
     ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
     if (dockingInfo.padD < CFG.DOCK_PAD_R) {
@@ -1581,7 +1475,6 @@ function drawStation(st) {
   }
 }
 
-// Safe-zone check — FIX: cache by rounded chunk coords, not raw float
 let _safeCache = { cx:NaN, cy:NaN, result:false };
 function inSafe(x, y) {
   const cx = Math.round(x/100), cy = Math.round(y/100);
@@ -1632,7 +1525,6 @@ function acceptContract(c) {
   addLog('✓ CONTRACT ACCEPTED: Deliver ' + c.qty + '× ' + c.good + ' to ' + c.to);
   addLog('  Reward: ' + c.reward.toLocaleString() + ' CR on delivery');
   showEventBanner('CONTRACT ACCEPTED', 'Deliver ' + c.qty + '× ' + c.good + ' to ' + c.to);
-  // FIX: only close modal if we are actually docked
   if (dockedSt) {
     document.getElementById('trade-modal').classList.remove('open');
     dockedSt = null;
@@ -1698,7 +1590,6 @@ function buildContractPanel(st) {
   cancelBtn.style.display = activeContract ? 'block' : 'none';
 }
 
-/** Off-screen arrow pointing to contract destination */
 function drawContractNav() {
   if (!activeContract || !activeContract.toRef) return;
   const dest = activeContract.toRef;
@@ -1725,7 +1616,6 @@ function drawContractNav() {
   ctx.fillText('▼ ' + activeContract.to, ix, iy+42);
 }
 
-/** Dashed route line from ship to contract destination */
 function drawRouteLine() {
   if (!activeContract || !activeContract.toRef) return;
   const dest = activeContract.toRef;
@@ -1939,7 +1829,6 @@ function updateEnemies(dt) {
     e.vx *= Math.pow(.975,dt*60); e.vy *= Math.pow(.975,dt*60);
     e.x += e.vx*dt; e.y += e.vy*dt;
 
-    // Enemy laser
     e.laserTimer += dt;
     if (!e.fleeing && !pSafe && e.laserTimer > e.laserCooldown && dist < 520) {
       e.laserTimer = 0;
@@ -1953,7 +1842,6 @@ function updateEnemies(dt) {
     }
     if (e.laserBeam) { e.laserBeam.ttl -= dt; if (e.laserBeam.ttl <= 0) e.laserBeam = null; }
 
-    // Ram damage
     if (!pSafe && dist < 24 && ship.invincible <= 0) {
       ship.hull = Math.max(0, ship.hull-10); e.hull -= 50;
       if (e.hull <= 0) killEnemy(e); if (ship.hull <= 0) killShip();
@@ -2268,7 +2156,6 @@ function updateStranded(dt) {
         s.vx += Math.sin(s.angle)*spd*dt*2; s.vy -= Math.cos(s.angle)*spd*dt*2;
       }
       s.vx*=Math.pow(.94,dt*60); s.vy*=Math.pow(.94,dt*60); s.x+=s.vx*dt; s.y+=s.vy*dt;
-      // Check escort delivery
       for (const st of allNearby()) {
         if (!st) continue;
         if (Math.hypot(s.x-st.x, s.y-st.y) < st.radius*0.8) {
@@ -2292,7 +2179,6 @@ function drawStranded() {
   for (const s of stranded) {
     if (s.ttl <= 0) continue;
     const sx=wx(s.x), sy=wy(s.y);
-    // Off-screen escort arrow
     if (sx<-100||sx>canvas.width+100||sy<-100||sy>canvas.height+100) {
       if (!s.escorting) continue;
       const ccx=canvas.width/2, ccy=canvas.height/2;
@@ -2464,14 +2350,16 @@ function drawMinimap() {
   const range = isFS ? (8000/mmZoom) : 2500;
   const scale = Math.min(W,H) / (range*2);
   const cx=W/2, cy=H/2;
-  const mx2=x=>cx+(x-ship.x)*scale, my2=y=>cy+(y-ship.y)*scale;
+  const viewX = ship.x + mapPanX;
+  const viewY = ship.y + mapPanY;
+  const mx2=x=>cx+(x-viewX)*scale, my2=y=>cy+(y-viewY)*scale;
 
   if (!isFS) { mmx.beginPath(); mmx.arc(cx,cy,Math.min(W,H)/2-2,0,Math.PI*2); mmx.strokeStyle=wa(PAL.ink,.2); mmx.lineWidth=1; mmx.stroke(); }
   if (isFS) {
     mmx.strokeStyle=wa(PAL.ink,.05); mmx.lineWidth=1;
     const gs = isFS && mmZoom>3 ? 3000 : 1000;
-    for (let x=Math.floor((ship.x-range)/gs)*gs; x<=ship.x+range; x+=gs) { mmx.beginPath(); mmx.moveTo(mx2(x),0); mmx.lineTo(mx2(x),H); mmx.stroke(); }
-    for (let y=Math.floor((ship.y-range)/gs)*gs; y<=ship.y+range; y+=gs) { mmx.beginPath(); mmx.moveTo(0,my2(y)); mmx.lineTo(W,my2(y)); mmx.stroke(); }
+    for (let x=Math.floor((viewX-range)/gs)*gs; x<=viewX+range; x+=gs) { mmx.beginPath(); mmx.moveTo(mx2(x),0); mmx.lineTo(mx2(x),H); mmx.stroke(); }
+    for (let y=Math.floor((viewY-range)/gs)*gs; y<=viewY+range; y+=gs) { mmx.beginPath(); mmx.moveTo(0,my2(y)); mmx.lineTo(W,my2(y)); mmx.stroke(); }
   }
 
   if (!isFS) { mmx.save(); mmx.beginPath(); mmx.arc(cx,cy,Math.min(W,H)/2-3,0,Math.PI*2); mmx.clip(); }
@@ -2488,7 +2376,7 @@ function drawMinimap() {
   };
   drawStBlip(homeStation);
   const cr2 = isFS ? Math.ceil(range/CFG.CHUNK)+1 : 3;
-  const pcx2=Math.floor(ship.x/CFG.CHUNK), pcy2=Math.floor(ship.y/CFG.CHUNK);
+  const pcx2=Math.floor(viewX/CFG.CHUNK), pcy2=Math.floor(viewY/CFG.CHUNK);
   for (let dx2=-cr2;dx2<=cr2;dx2++) for (let dy2=-cr2;dy2<=cr2;dy2++) { const s=getStation(pcx2+dx2,pcy2+dy2); if (s&&s.discovered) drawStBlip(s); }
 
   for (const m of meteors) { if (m.dead) continue; const bx=mx2(m.x),by=my2(m.y); if(bx<-10||bx>W+10||by<-10||by>H+10) continue; mmx.fillStyle=wa(PAL.ink,.2); mmx.fillRect(bx-2,by-2,4,4); }
@@ -2501,13 +2389,13 @@ function drawMinimap() {
     mmx.beginPath(); mmx.arc(bx,by,isFS?9:6,0,Math.PI*2); mmx.strokeStyle=wa(PAL.ink,pa); mmx.lineWidth=2; mmx.stroke();
     mmx.font=(isFS?'10':'8')+'px Share Tech Mono'; mmx.fillStyle=wa(PAL.ink,pa); mmx.textAlign='center'; mmx.fillText('★',bx,by+(isFS?4:3));
   }
-  if (!isFS) mmx.restore();
 
   // Player blip
-  mmx.save(); mmx.translate(cx,cy); mmx.rotate(ship.angle);
+  mmx.save(); mmx.translate(mx2(ship.x), my2(ship.y)); mmx.rotate(ship.angle);
   const ps=isFS?8:5;
   mmx.beginPath(); mmx.moveTo(0,-ps); mmx.lineTo(ps*.6,ps*.6); mmx.lineTo(-ps*.6,ps*.6); mmx.closePath();
   mmx.fillStyle=PAL.ink; mmx.fill(); mmx.restore();
+  if (!isFS) mmx.restore();
 
   if (isFS) {
     document.getElementById('stats-discovered').textContent = 'DISCOVERED: ' + (discovered.size+1);
@@ -2553,8 +2441,6 @@ function updateHUD() {
   document.getElementById('cargo-list').innerHTML  = list.length ? list.map(([g,q])=>`${q}× ${g}`).join('<br>') : '── EMPTY ──';
 }
 
-// ── Log ──
-
 const logLines = [];
 function addLog(msg) {
   logLines.unshift(msg); if (logLines.length > 8) logLines.pop();
@@ -2562,10 +2448,8 @@ function addLog(msg) {
   if (el) el.innerHTML = logLines.map((l,i)=>`<span style="opacity:${1-i*.12}">${l}</span>`).join('<br>');
 }
 
-// ── Controls hint ──
-
 let ctrlVisible = true;
-const CTRLS = [{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser'},{k:'Q',d:'Shield'},{k:'E',d:'Dock'},{k:'1/2',d:'Speed Mode'},{k:'J',d:'Hyperdrive'},{k:'M',d:'Map'},{k:'ESC',d:'Pause'},{k:'H',d:'Hide'}];
+const CTRLS = [{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser'},{k:'Q',d:'Shield'},{k:'E',d:'Dock'},{k:'1/2',d:'Speed Mode'},{k:'J',d:'Hyperdrive'},{k:'M',d:'Map'},{k:'ESC',d:'Pause'},{k:'H',d:'Hide'},{k:'🎮',d:'Gamepad Active'}];
 
 function drawControls() {
   if (!ctrlVisible || mmCv.classList.contains('fullscreen')) return;
@@ -2577,8 +2461,6 @@ function drawControls() {
     ctx.fillStyle=wa(PAL.ink,.25); ctx.fillText(c.d,cx2,y+13);
   });
 }
-
-// ── Vignette ──
 
 function drawVignette() {
   const vg=ctx.createRadialGradient(canvas.width/2,canvas.height/2,canvas.height*.35,canvas.width/2,canvas.height/2,canvas.height*.88);
@@ -2602,7 +2484,6 @@ function showEventBanner(title, sub, duration=4000) {
   b.style.opacity='1'; clearTimeout(b._t); b._t=setTimeout(()=>b.style.opacity='0', duration);
 }
 
-/** Returns true if any blocking modal (trade, distress, death, stranded, pause, hyperdrive) is open */
 function modalOpen() {
   return document.getElementById('trade-modal').classList.contains('open')
       || document.getElementById('distress-modal').classList.contains('open')
@@ -2633,7 +2514,6 @@ function loadGame() {
     karma=s.karma||0; contractsDone=s.contractsDone||0;
     if (s.discovered) for (const d of s.discovered) {
       discovered.add(d);
-      // Re-hydrate station discovered flag
       if (d !== 'home') {
         const [ccx,ccy]=d.split(',').map(Number);
         const st=getStation(ccx,ccy); if (st) st.discovered=true;
@@ -2674,8 +2554,14 @@ function toggleMap() {
   const isFS=mmCv.classList.toggle('fullscreen');
   document.getElementById('minimap-label').classList.toggle('fullscreen');
   document.getElementById('minimap-stats-fs').classList.toggle('visible', isFS);
-  if (isFS) { mmCv.width=window.innerWidth; mmCv.height=window.innerHeight; mmZoom=1; document.getElementById('minimap-label').textContent='STELLAR MAP · [M] CLOSE'; }
-  else       { mmCv.width=180; mmCv.height=180; document.getElementById('minimap-label').textContent='MAP · [M]'; }
+  if (isFS) { 
+    mmCv.width=window.innerWidth; mmCv.height=window.innerHeight; mmZoom=1; 
+    document.getElementById('minimap-label').textContent='STELLAR MAP · [M] CLOSE'; 
+  } else { 
+    mmCv.width=180; mmCv.height=180; 
+    mapPanX = 0; mapPanY = 0; 
+    document.getElementById('minimap-label').textContent='MAP · [M]'; 
+  }
 }
 
 function togglePause() {
@@ -2752,8 +2638,142 @@ function updateJoystick(cx, cy) {
   const D=.15;
   keys['KeyW']=ny/maxR<-D; keys['KeyS']=ny/maxR>D; keys['KeyA']=nx/maxR<-D; keys['KeyD']=nx/maxR>D;
 }
-
 initTouch();
+
+
+// ── ## GAMEPAD ───────────────────────────────────────────────────────────────
+
+const GamepadInput = {
+  prev: [],
+  deadzone: 0.2,
+  update: function(dt) {
+    const pads = navigator.getGamepads();
+    let gp = null;
+    for (let i = 0; i < pads.length; i++) {
+        if (pads[i] && pads[i].connected) { gp = pads[i]; break; }
+    }
+    if (!gp) return;
+
+    const justPressed = (btnIdx) => gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed && (!this.prev[btnIdx]);
+    const pressed = (btnIdx) => gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed;
+
+    const inUI = modalOpen() || document.getElementById('boot').style.display !== 'none';
+    const inMap = mmCv.classList.contains('fullscreen');
+
+    if (inUI) {
+      this.handleUI(justPressed);
+    } else if (inMap) {
+      this.handleMap(gp, dt, justPressed, pressed);
+    } else {
+      this.handleGameplay(gp, justPressed, pressed);
+    }
+
+    for(let i=0; i<gp.buttons.length; i++) this.prev[i] = gp.buttons[i].pressed;
+  },
+  
+  handleUI: function(justPressed) {
+    if (justPressed(12)) this.navUI(-1); // D-pad Up
+    if (justPressed(14)) this.navUI(-1); // D-pad Left
+    if (justPressed(13)) this.navUI(1);  // D-pad Down
+    if (justPressed(15)) this.navUI(1);  // D-pad Right
+
+    if (justPressed(0)) this.clickUI();  // A - Confirm
+    if (justPressed(1)) {                // B - Back/Cancel
+      if (isPaused) togglePause();
+      else if (document.getElementById('trade-modal').classList.contains('open')) document.getElementById('trade-close').click();
+      else if (document.getElementById('hyperdrive-modal').classList.contains('open')) document.getElementById('hyperdrive-close').click();
+      else if (document.getElementById('distress-modal').classList.contains('open')) document.getElementById('btn-drift').click();
+      else if (document.getElementById('stranded-modal').classList.contains('open')) document.getElementById('btn-strand-leave').click();
+    }
+  },
+
+  navUI: function(dir) {
+    const boot = document.getElementById('boot');
+    const isBootOpen = boot && boot.style.display !== 'none';
+    const modal = document.querySelector('.open') || (isBootOpen ? boot : null);
+    if (!modal && !isPaused) return;
+
+    const container = isPaused ? document.getElementById('pause-modal') : modal;
+    
+    // Select standard buttons + custom interactive divs
+    const focusables = Array.from(container.querySelectorAll('button:not([disabled]), .cjob:not(.dim), .hd-dest:not(.no-fuel)'))
+                            .filter(el => el.offsetParent !== null);
+                            
+    if (focusables.length === 0) return;
+
+    let idx = focusables.findIndex(el => el.classList.contains('gp-focus'));
+    if (idx !== -1) focusables[idx].classList.remove('gp-focus');
+
+    idx += dir;
+    if (idx < 0) idx = focusables.length - 1;
+    if (idx >= focusables.length) idx = 0;
+
+    const target = focusables[idx];
+    target.classList.add('gp-focus');
+    if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  },
+
+  clickUI: function() {
+    const target = document.querySelector('.gp-focus');
+    if (target) {
+      if (target.tagName === 'BUTTON') target.click();
+      else if (target.onclick) target.onclick();
+    } else {
+        // Fallback: If nothing has focus, press the primary visible button if available
+        const modal = document.querySelector('.open') || document.getElementById('boot');
+        if(modal) {
+            const firstBtn = modal.querySelector('button:not([disabled])');
+            if(firstBtn) firstBtn.click();
+        }
+    }
+  },
+
+  handleMap: function(gp, dt, justPressed, pressed) {
+    if (justPressed(12) || justPressed(1)) { toggleMap(); return; } // D-pad Up or B closes Map
+
+    let lx = gp.axes[0]; 
+    let ly = gp.axes[1];
+    if (Math.abs(lx) > this.deadzone) mapPanX += lx * 3000 * dt / mmZoom;
+    if (Math.abs(ly) > this.deadzone) mapPanY += ly * 3000 * dt / mmZoom;
+
+    if (pressed(7) || gp.axes[5] > 0.1) mmZoom = Math.min(35, mmZoom + 2 * dt);  // RT = Zoom In
+    if (pressed(6) || gp.axes[2] > 0.1) mmZoom = Math.max(0.3, mmZoom - 2 * dt); // LT = Zoom Out
+  },
+
+  handleGameplay: function(gp, justPressed, pressed) {
+    // RT / LT - Throttle / Brake
+    keys['KeyW'] = pressed(7) || gp.axes[5] > 0.1;
+    keys['KeyS'] = pressed(6) || gp.axes[2] > 0.1;
+
+    // Left Stick - Steering
+    let lx = gp.axes[0];
+    if (lx < -this.deadzone) { keys['KeyA'] = true; keys['KeyD'] = false; }
+    else if (lx > this.deadzone) { keys['KeyD'] = true; keys['KeyA'] = false; }
+    else { keys['KeyA'] = false; keys['KeyD'] = false; }
+
+    if (justPressed(0)) keys['Space'] = true;
+    if (!pressed(0)) keys['Space'] = false;
+
+    if (justPressed(4)) setSpeedMode('MANEUVER'); // LB
+    if (justPressed(5)) setSpeedMode('COSMIC');   // RB
+    
+    if (justPressed(9)) openHyperdriveMenu();     // Menu
+    
+    if (justPressed(2)) {                         // X - Shield
+        if (!ship.hasShield) addLog('Buy shield at station first');
+        else if (ship.energy<20) addLog('Insufficient energy');
+        else { ship.shieldActive = !ship.shieldActive; addLog(ship.shieldActive ? 'Shield engaged' : 'Shield disengaged'); }
+    }
+
+    if (justPressed(10)) tryDock();               // L3
+
+    if (justPressed(1)) togglePause();            // B
+    
+    if (justPressed(12)) toggleMap();             // D-pad Up
+
+    if (justPressed(13)) ctrlVisible = !ctrlVisible; // D-pad Down
+  }
+};
 
 
 // ── ## MAIN LOOP ──────────────────────────────────────────────────────────────
@@ -2763,18 +2783,16 @@ let lastTime = 0;
 function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, .05);
   lastTime = ts;
+  
+  GamepadInput.update(dt);
 
-  // Clear frame
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Background layers
   drawGalaxy(); drawStars(); drawGrid();
 
-  // Update docking info once per frame (used by drawStation + tryDock)
   if (!isPaused) updateDockingInfo();
 
-  // World rendering
   drawStation(homeStation);
   for (const [ccx,ccy] of visChunks(2)) { const st=getStation(ccx,ccy); if (st && st.discovered) drawStation(st); }
   drawBlackHoles(); drawMeteors(); drawSwarms();
@@ -2785,19 +2803,16 @@ function loop(ts) {
   drawShield(); drawVignette(); drawControls();
   drawMinimap();
 
-  // Update (only when unpaused)
   if (!isPaused) {
     updateShip(dt); updateEnemies(dt); updateMeteors(dt);
     updateBlackHoles(dt); updateSwarms(dt); updateStranded(dt);
     updateBoss(dt); updateBossProj(dt); tickShield(dt); regenStations(dt);
     updateWormhole(dt);
 
-    // FIX: decrement drop TTL in one place only (here), not also in drawDrops
     for (let i = drops.length-1; i >= 0; i--) {
       drops[i].ttl -= dt;
       if (drops[i].ttl < 0) drops.splice(i, 1);
     }
-    // Cap drops array to prevent memory growth
     if (drops.length > DROP_CAP) drops.splice(0, drops.length - DROP_CAP);
   }
 
@@ -2831,3 +2846,5 @@ document.getElementById('boot-start').addEventListener('click', () => {
 </script>
 </body>
 </html>
+
+```
