@@ -1,0 +1,3186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VOIDTRADER · WHITE (XBOX CONTROLLER EDITION)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* ═══════════════════════════════════════════════════
+   THEME — Black on warm paper (Milky Way mode)
+   Edit CSS variables here to retheme the whole game
+   ═══════════════════════════════════════════════════ */
+:root{
+  --bg:        #f5f3ee;
+  --panel:     rgba(245,243,238,0.92);
+  --ink:       #000000;
+  --ink2:      #333333;
+  --ink3:      #777777;
+  --ink4:      #bbbbbb;
+  --safe:      #006600;
+  --warn:      #cc6600;
+  --danger:    #cc0000;
+  --accent:    #cc4400;
+  --accent-rgb:204,68,0;
+  --fnt:       'Orbitron', monospace;
+  --fnt2:      'Share Tech Mono', monospace;
+}
+
+body{
+  background:var(--bg);
+  overflow:hidden;
+  font-family:var(--fnt2);
+  color:var(--ink);
+  user-select:none;
+  -webkit-font-smoothing:antialiased;
+  cursor:crosshair;
+}
+
+#canvas{display:block;position:fixed;top:0;left:0;z-index:1;}
+
+/* Gamepad Focus State */
+.gp-focus {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px !important;
+  background: rgba(200, 60, 0, 0.08) !important;
+}
+
+/* ── HUD panels ── */
+#hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
+
+.hp{
+  position:absolute;
+  background:var(--panel);
+  border:1px solid rgba(128,128,128,.14);
+  border-top:2px solid rgba(128,128,128,.5);
+  font-family:var(--fnt2);font-size:11px;line-height:1.7;
+  letter-spacing:.06em;color:var(--ink2);
+  padding:10px 14px 12px;
+  backdrop-filter:blur(12px);
+}
+.hp::before{
+  content:attr(data-l);
+  display:block;
+  font-family:var(--fnt);font-size:8px;letter-spacing:.4em;
+  color:var(--ink3);
+  border-bottom:1px solid rgba(128,128,128,.1);
+  margin-bottom:7px;padding-bottom:4px;
+  text-transform:uppercase;
+}
+
+#hp-nav  {top:0;left:0;width:210px;clip-path:polygon(0 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%);}
+#hp-ship {top:0;right:0;width:210px;clip-path:polygon(0 0,100% 0,100% 100%,12px 100%,0 calc(100% - 12px));}
+#hp-cargo{bottom:0;left:0;width:210px;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);}
+#hp-log  {bottom:0;left:220px;width:290px;}
+
+/* Status bars */
+.bbar{display:inline-block;width:88px;height:3px;background:rgba(128,128,128,.15);vertical-align:middle;position:relative;overflow:hidden;}
+.bfill{position:absolute;top:0;left:0;height:100%;background:var(--ink);transition:width .25s;}
+.bfill.warn  {background:var(--warn);}
+.bfill.danger{background:var(--danger);animation:blink .5s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.val{color:var(--ink);font-weight:500;}
+.dim{color:var(--ink3);font-size:10px;}
+.ok {color:var(--safe);}
+.wr {color:var(--warn);}
+.er {color:var(--danger);}
+.ac {color:var(--accent);}
+
+/* Crosshair */
+#xhair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:12;color:var(--ink);opacity:.45;}
+
+/* ── Minimap ── */
+#minimap{
+  position:fixed;bottom:14px;right:14px;
+  width:180px;height:180px;border-radius:50%;
+  border:1px solid rgba(128,128,128,.2);
+  background:var(--panel);
+  z-index:15;cursor:pointer;
+  clip-path:circle(50%);overflow:hidden;
+}
+#minimap-label{
+  position:fixed;bottom:200px;right:14px;width:180px;text-align:center;
+  font-family:var(--fnt);font-size:8px;letter-spacing:.25em;
+  color:var(--ink3);z-index:16;pointer-events:none;
+}
+#minimap.fullscreen{
+  top:0;left:0;right:0;bottom:0;width:100%;height:100%;
+  border-radius:0;clip-path:none;border:none;z-index:80;background:var(--bg);cursor:default;
+}
+#minimap-label.fullscreen{top:14px;right:14px;left:auto;bottom:auto;width:auto;font-size:11px;color:rgba(0,0,0,.5);}
+#minimap-stats-fs{display:none;position:fixed;top:14px;left:14px;z-index:81;font-size:12px;color:rgba(0,0,0,.4);letter-spacing:.07em;font-family:var(--fnt2);}
+#minimap-stats-fs.visible{display:block;}
+#minimap-stats-fs p{margin-bottom:5px;}
+
+/* ── Boot screen ── */
+#boot{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;}
+#boot h1{font-family:var(--fnt);font-size:clamp(36px,6vw,72px);font-weight:900;letter-spacing:.6em;color:var(--ink);margin-bottom:4px;}
+#boot .sub{color:var(--ink3);font-size:10px;margin-bottom:32px;letter-spacing:.45em;font-family:var(--fnt2);}
+.bl{color:var(--ink2);margin:2px 0;font-size:12px;font-family:var(--fnt2);letter-spacing:.06em;}
+.bl.ok::before {content:'◆  ';color:var(--safe);}
+.bl.w::before  {content:'◈  ';color:var(--warn);}
+#boot-start{
+  margin-top:32px;background:transparent;
+  border:1px solid var(--ink);color:var(--ink);
+  font-family:var(--fnt);font-size:12px;letter-spacing:.4em;
+  padding:14px 44px;cursor:pointer;
+  clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);
+  transition:background .2s;
+}
+#boot-start:hover{background:rgba(var(--accent-rgb),.08);border-color:var(--accent);color:var(--accent);}
+#boot-reset{margin-top:10px;background:transparent;border:1px solid rgba(128,128,128,.2);color:var(--ink3);font-family:var(--fnt2);font-size:10px;letter-spacing:.2em;padding:7px 20px;cursor:pointer;}
+#boot-reset:hover{background:rgba(128,128,128,.05);}
+
+/* ── Contract HUD strip ── */
+#contract-hud{
+  position:fixed;top:46px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid rgba(128,128,128,.14);border-top:none;
+  font-family:var(--fnt2);font-size:11px;
+  padding:8px 20px 10px;z-index:11;pointer-events:none;
+  display:none;text-align:center;
+}
+#contract-hud .ct{font-family:var(--fnt);font-size:8px;letter-spacing:.4em;color:var(--ink3);margin-bottom:3px;}
+#contract-hud .cc{color:var(--ink);letter-spacing:.12em;}
+#contract-hud .cd{color:rgba(0,0,0,.5);font-size:10px;margin-top:2px;}
+
+/* ── Modals ── */
+#trade-modal,#distress-modal,#stranded-modal{
+  display:none;position:fixed;inset:0;
+  background:var(--panel);z-index:110;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(18px);
+}
+#trade-modal.open,#distress-modal.open,#stranded-modal.open{display:flex;}
+#death-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:150;align-items:center;justify-content:center;flex-direction:column;}
+#death-screen.open{display:flex;}
+
+/* Trade box */
+#trade-box{
+  border:1px solid rgba(128,128,128,.2);border-top:2px solid var(--ink);
+  background:var(--bg);width:600px;max-height:90vh;overflow-y:auto;padding:24px;
+  font-family:var(--fnt2);font-size:12px;color:var(--ink2);
+  pointer-events:all;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
+}
+#trade-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--ink);margin-bottom:16px;font-weight:500;}
+.trow{display:grid;grid-template-columns:110px 50px 70px 70px 50px 120px;gap:6px;align-items:center;margin-bottom:4px;font-size:11px;}
+.trow.th{color:var(--ink3);font-size:9px;letter-spacing:.2em;border-bottom:1px solid rgba(128,128,128,.12);padding-bottom:5px;margin-bottom:8px;font-family:var(--fnt);}
+.tbtn{
+  border:1px solid rgba(128,128,128,.22);background:transparent;color:var(--ink);
+  font-family:var(--fnt2);font-size:10px;padding:4px 8px;cursor:pointer;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+  letter-spacing:.1em;transition:background .15s;
+}
+.tbtn:hover{background:rgba(128,128,128,.08);}
+.tbtn.sell{border-color:rgba(160,60,0,.4);color:var(--accent);}
+.tbtn.sell:hover{background:rgba(160,60,0,.06);}
+.tactions{display:flex;gap:4px;}.tactions .tbtn{flex:1;}
+#trade-close{margin-top:16px;width:100%;border:1px solid rgba(128,128,128,.12);background:transparent;color:var(--ink3);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#trade-close:hover{background:rgba(0,0,0,.04);}
+
+/* Contract panel inside trade */
+#contract-panel{border-top:1px solid rgba(0,0,0,.08);margin-top:12px;padding-top:12px;}
+#contract-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:rgba(0,0,0,.3);margin-bottom:10px;}
+.cjob{border:1px solid rgba(128,128,128,.12);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;}
+.cjob:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.04);}
+.cjob.active{border-color:var(--ink);background:rgba(128,128,128,.05);}
+.cjob .cname{color:var(--ink);font-size:11px;letter-spacing:.1em;margin-bottom:4px;}
+.cjob .cinfo{color:var(--ink3);font-size:10px;line-height:1.6;}
+.cjob .crew{color:var(--accent);font-size:11px;font-weight:500;float:right;margin-top:-20px;}
+
+/* Distress box */
+#distress-box{border:1px solid rgba(128,128,128,.2);border-top:2px solid var(--warn);background:var(--bg);width:400px;padding:24px;text-align:center;font-family:var(--fnt2);pointer-events:all;}
+#distress-box h2{color:var(--warn);font-family:var(--fnt);font-size:14px;letter-spacing:.3em;margin-bottom:10px;}
+#distress-box p{font-size:11px;margin-bottom:16px;line-height:1.7;color:rgba(0,0,0,.6);}
+.dbtn{border:1px solid rgba(0,0,0,.2);background:transparent;color:var(--warn);font-family:var(--fnt2);font-size:12px;padding:9px 22px;cursor:pointer;letter-spacing:.15em;margin:4px;}
+.dbtn:hover{background:rgba(0,0,0,.04);}
+.dbtn.er{border-color:rgba(160,0,0,.35);color:var(--danger);}
+
+/* Death screen */
+#death-screen h1{font-family:var(--fnt);color:var(--danger);font-size:42px;letter-spacing:.5em;margin-bottom:12px;font-weight:700;}
+#death-screen p{color:rgba(160,0,0,.5);font-size:12px;letter-spacing:.2em;margin-bottom:28px;font-family:var(--fnt2);}
+#death-screen button{border:1px solid rgba(160,0,0,.4);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:13px;padding:12px 32px;cursor:pointer;letter-spacing:.25em;}
+#death-screen button:hover{background:rgba(160,0,0,.04);}
+
+/* Message overlay */
+#msg-overlay{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--fnt2);font-size:14px;letter-spacing:.3em;color:var(--warn);pointer-events:none;z-index:30;opacity:0;transition:opacity .4s;text-align:center;}
+
+/* Pause modal */
+#pause-modal{display:none;position:fixed;inset:0;background:var(--panel);backdrop-filter:blur(18px);z-index:180;align-items:center;justify-content:center;}
+#pause-modal.open{display:flex;}
+#pause-box{border:1px solid rgba(128,128,128,.18);border-top:2px solid var(--ink);background:var(--bg);width:400px;padding:30px;text-align:center;color:var(--ink2);pointer-events:all;clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);}
+#pause-box h2{font-family:var(--fnt);font-size:26px;letter-spacing:.55em;color:var(--ink);margin-bottom:4px;font-weight:700;text-shadow:0 0 20px rgba(var(--accent-rgb),.3);}
+#pause-box .sub{font-size:9px;letter-spacing:.3em;color:var(--ink3);margin-bottom:22px;font-family:var(--fnt);}
+.pause-stats{border-top:1px solid rgba(128,128,128,.12);border-bottom:1px solid rgba(128,128,128,.12);padding:12px 0;margin:16px 0;font-size:12px;line-height:2;letter-spacing:.08em;font-family:var(--fnt2);}
+.pause-stats span{color:var(--accent);font-weight:500;}
+.pbtn{display:block;width:100%;margin-top:8px;border:1px solid rgba(128,128,128,.18);background:transparent;color:var(--ink);font-family:var(--fnt2);font-size:12px;letter-spacing:.2em;padding:10px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:background .15s,border-color .15s;}
+.pbtn:hover{background:rgba(var(--accent-rgb),.06);border-color:var(--accent);}
+.pbtn.dim{border-color:rgba(128,128,128,.1);color:var(--ink3);}
+.pbtn.dim:hover{background:rgba(0,0,0,.03);}
+
+/* Event banner */
+#event-banner{
+  position:fixed;top:0;left:0;right:0;
+  background:var(--panel);
+  border-bottom:1px solid rgba(128,128,128,.2);
+  padding:10px 0;text-align:center;
+  z-index:20;pointer-events:none;
+  opacity:0;transition:opacity .4s;
+  font-family:var(--fnt2);
+  backdrop-filter:blur(8px);
+}
+
+/* Touch controls */
+#joystick-zone{position:fixed;bottom:60px;left:20px;width:120px;height:120px;border-radius:50%;border:1px solid rgba(0,0,0,.15);z-index:20;display:none;touch-action:none;}
+#joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.03);}
+#joystick-knob{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.3);left:36px;top:36px;}
+#touch-btns{position:fixed;bottom:60px;right:20px;z-index:20;display:none;flex-direction:column;gap:8px;align-items:flex-end;}
+.tch-btn{background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.2);color:rgba(0,0,0,.7);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:10px 14px;cursor:pointer;touch-action:none;}
+.tch-btn.active{background:rgba(0,0,0,.1);border-color:var(--ink);color:var(--ink);}
+.tch-row{display:flex;gap:8px;}
+#btn-pause-touch{position:fixed;top:14px;right:14px;background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.5);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:7px 14px;z-index:20;display:none;cursor:pointer;}
+#btn-map-touch{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:rgba(245,243,238,.85);border:1px solid rgba(0,0,0,.12);color:rgba(0,0,0,.45);font-family:var(--fnt2);font-size:8px;letter-spacing:.2em;padding:5px 14px;z-index:20;display:none;cursor:pointer;}
+@media(pointer:coarse){
+  #joystick-zone,#touch-btns,#btn-pause-touch,#btn-map-touch{display:flex;}
+  #hp-log{display:none;}
+}
+
+/* Stranded modal */
+#sbox{border:1px solid rgba(128,128,128,.2);background:var(--bg);width:440px;padding:24px;font-size:11px;color:var(--ink2);pointer-events:all;text-align:center;}
+#sbox h2{font-family:var(--fnt);font-size:12px;letter-spacing:.3em;color:var(--ink);margin-bottom:6px;}
+#sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:rgba(0,0,0,.55);}
+
+/* ── Speed Mode HUD ── */
+#speed-mode-hud{
+  position:fixed;top:0;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid rgba(128,128,128,.14);border-top:none;border-bottom:2px solid rgba(128,128,128,.5);
+  font-family:var(--fnt);font-size:8px;letter-spacing:.35em;
+  padding:6px 18px 8px;z-index:11;pointer-events:none;
+  display:flex;gap:20px;align-items:center;
+  clip-path:polygon(0 0,100% 0,calc(100% - 10px) 100%,10px 100%);
+  margin-top:0;
+}
+.smode-btn{
+  padding:3px 10px;border:1px solid rgba(128,128,128,.18);color:var(--ink3);
+  font-family:var(--fnt);font-size:7px;letter-spacing:.3em;cursor:pointer;
+  pointer-events:all;transition:all .15s;
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+}
+.smode-btn.active{border-color:var(--ink);color:var(--ink);background:rgba(128,128,128,.07);}
+.smode-btn:hover:not(.active){border-color:rgba(128,128,128,.45);color:var(--ink2);}
+.smode-btn.hyperdrive{border-color:rgba(160,60,0,.5);color:var(--accent);}
+.smode-btn.hyperdrive.active{background:rgba(160,60,0,.08);}
+#smode-label{color:var(--ink);font-size:9px;letter-spacing:.25em;min-width:80px;text-align:center;}
+
+/* ── Hyperdrive Destination Modal ── */
+#hyperdrive-modal{
+  display:none;position:fixed;inset:0;
+  background:var(--panel);z-index:115;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(18px);
+}
+#hyperdrive-modal.open{display:flex;}
+#hyperdrive-box{
+  border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--accent);
+  background:var(--bg);width:520px;max-height:80vh;overflow-y:auto;padding:24px;
+  font-family:var(--fnt2);font-size:12px;color:rgba(0,0,0,.65);
+  pointer-events:all;
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
+}
+#hyperdrive-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--accent);margin-bottom:4px;font-weight:500;}
+#hyperdrive-box .hd-sub{font-size:10px;color:rgba(0,0,0,.35);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:10px;}
+#hyperdrive-box .hd-fuel-warn{
+  font-size:11px;color:var(--warn);letter-spacing:.1em;margin-bottom:14px;
+  border:1px solid rgba(200,100,0,.25);padding:8px 12px;background:rgba(200,100,0,.04);
+}
+.hd-dest{
+  display:grid;grid-template-columns:1fr 90px 80px;gap:8px;align-items:center;
+  border:1px solid rgba(128,128,128,.1);padding:10px 12px;margin-bottom:6px;cursor:pointer;
+  transition:border-color .15s,background .15s;font-size:11px;
+}
+.hd-dest:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.03);}
+.hd-dest .hd-name{color:var(--ink);font-family:var(--fnt);font-size:9px;letter-spacing:.25em;}
+.hd-dest .hd-dist{color:rgba(0,0,0,.4);font-size:10px;}
+.hd-dest .hd-jump{color:var(--accent);font-size:10px;text-align:right;}
+.hd-dest.no-fuel{opacity:.4;cursor:not-allowed;}
+.hd-dest.no-fuel:hover{border-color:rgba(0,0,0,.1);background:transparent;}
+#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(0,0,0,.12);background:transparent;color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#hyperdrive-close:hover{background:rgba(0,0,0,.04);}
+
+/* ── Trajectory Warning ── */
+#traj-warning{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;z-index:25;
+  display:none;text-align:center;
+}
+#traj-warning.active{display:block;}
+#traj-warning .tw-box{
+  border:2px solid var(--danger);padding:12px 28px;
+  background:var(--panel);
+  font-family:var(--fnt);font-size:11px;letter-spacing:.3em;color:var(--danger);
+  animation:twPulse .35s ease-in-out infinite alternate;
+  clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
+}
+@keyframes twPulse{from{border-color:rgba(204,0,0,.4);color:rgba(204,0,0,.6);}to{border-color:var(--danger);color:var(--danger);}}
+
+/* ── Wormhole overlay ── */
+#wormhole-overlay{
+  position:fixed;inset:0;pointer-events:none;z-index:90;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s;
+}
+#wormhole-overlay.active{opacity:1;}
+
+/* ═══════════════════════════════════════════════════
+   DARK MODE CSS variables override
+   ═══════════════════════════════════════════════════ */
+:root.dark-mode {
+  --bg:    #0d0c10;
+  --panel: rgba(13,12,16,0.92);
+  --ink:   #e8e4dc;
+  --ink2:  #aaa49a;
+  --ink3:  #666060;
+  --ink4:  #333030;
+  --safe:  #22cc44;
+  --warn:  #ddaa00;
+  --danger:#ff3333;
+}
+
+/* ── Pause settings section ── */
+#pause-settings{
+  border-top:1px solid rgba(128,128,128,.15);
+  padding-top:14px;margin-top:14px;
+}
+#pause-settings-title{
+  font-family:var(--fnt);font-size:8px;letter-spacing:.4em;
+  color:rgba(128,128,128,.45);margin-bottom:12px;
+  text-transform:uppercase;
+}
+
+/* Dark/Light toggle */
+.theme-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+  font-family:var(--fnt2);font-size:10px;letter-spacing:.15em;
+  color:rgba(128,128,128,.7);
+}
+.theme-toggle-wrap{display:flex;align-items:center;gap:8px;}
+.theme-label{font-size:9px;letter-spacing:.2em;opacity:.5;}
+.theme-label.active{opacity:1;color:var(--ink);}
+
+/* Toggle switch */
+.toggle-switch{
+  position:relative;width:42px;height:22px;cursor:pointer;
+  display:inline-block;
+}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-track{
+  position:absolute;inset:0;
+  border:1px solid rgba(128,128,128,.3);
+  background:rgba(128,128,128,.08);
+  clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+  transition:background .2s,border-color .2s;
+}
+.toggle-switch input:checked ~ .toggle-track{
+  background:rgba(var(--accent-rgb),.18);
+  border-color:var(--accent);
+}
+.toggle-knob{
+  position:absolute;top:3px;left:3px;width:14px;height:14px;
+  background:rgba(128,128,128,.4);
+  clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);
+  transition:transform .2s, background .2s;
+}
+.toggle-switch input:checked ~ .toggle-knob{
+  transform:translateX(19px);
+  background:var(--accent);
+}
+
+/* Color picker row */
+.color-row{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--fnt2);font-size:10px;letter-spacing:.15em;
+  color:rgba(128,128,128,.7);
+}
+.color-chips{display:flex;gap:6px;align-items:center;}
+.color-chip{
+  width:20px;height:20px;cursor:pointer;
+  border:1.5px solid rgba(128,128,128,.2);
+  clip-path:polygon(3px 0,100% 0,calc(100% - 3px) 100%,0 100%);
+  transition:transform .12s, border-color .12s;
+}
+.color-chip:hover{transform:scale(1.12);}
+.color-chip.active{
+  border-color:var(--ink)!important;
+  transform:scale(1.18);
+  outline:1px solid var(--ink);
+  outline-offset:1px;
+}
+
+/* ── Galaxy background canvas ── */
+#galaxy-bg{
+  position:fixed;inset:0;z-index:0;
+  pointer-events:none;
+}
+
+/* ── Ensure canvas is above galaxy bg ── */
+#canvas{z-index:2;}
+
+</style>
+</head>
+<body>
+<canvas id="galaxy-bg"></canvas>
+<canvas id="canvas"></canvas>
+<canvas id="minimap" width="180" height="180"></canvas>
+<div id="minimap-label">MAP · [M]</div>
+
+<div id="speed-mode-hud">
+  <button class="smode-btn active" id="smode-maneuver" onclick="setSpeedMode('MANEUVER')">MANEUVERING</button>
+  <button class="smode-btn" id="smode-cosmic" onclick="setSpeedMode('COSMIC')">COSMIC</button>
+  <button class="smode-btn hyperdrive" id="smode-hyperdrive" onclick="openHyperdriveMenu()">HYPERDRIVE [J]</button>
+  <span id="smode-label">MANEUVERING</span>
+</div>
+
+<div id="hyperdrive-modal">
+  <div id="hyperdrive-box">
+    <h2>HYPERDRIVE · DESTINATION SELECT</h2>
+    <div class="hd-sub">JUMP COST: <span style="color:var(--accent)" id="hd-fuel-cost">–</span> FUEL &nbsp;·&nbsp; CURRENT: <span id="hd-fuel-current">–</span></div>
+    <div class="hd-fuel-warn" id="hd-no-fuel-msg" style="display:none">⚠ INSUFFICIENT FUEL FOR HYPERDRIVE JUMP (requires 2/3 max fuel)</div>
+    <div id="hyperdrive-dest-list"></div>
+    <button id="hyperdrive-close">[ CANCEL ]</button>
+  </div>
+</div>
+
+<div id="traj-warning"><div class="tw-box">⚠ IMPACT TRAJECTORY DETECTED ⚠</div></div>
+
+<div id="wormhole-overlay"><canvas id="wormhole-canvas"></canvas></div>
+
+<div id="contract-hud">
+  <div class="ct">ACTIVE CONTRACT</div>
+  <div class="cc" id="ch-route">— · —</div>
+  <div class="cd" id="ch-info">No active contract</div>
+</div>
+
+<div id="joystick-zone"><div id="joystick-base"></div><div id="joystick-knob"></div></div>
+<div id="touch-btns">
+  <div id="btn-fire" class="tch-btn">LASER</div>
+  <div class="tch-row">
+    <div id="btn-dock-touch" class="tch-btn">DOCK [E]</div>
+    <div id="btn-shield-touch" class="tch-btn">SHIELD [Q]</div>
+  </div>
+</div>
+<button id="btn-pause-touch">❙❙ PAUSE</button>
+<button id="btn-map-touch">MAP</button>
+
+<div id="minimap-stats-fs">
+  <p>STELLAR MAP</p>
+  <p id="stats-discovered">DISCOVERED: 1</p>
+  <p id="stats-zoom">ZOOM: 1.0x</p>
+  <p style="color:#333;margin-top:10px">[M] CLOSE · SCROLL ZOOM</p>
+</div>
+
+<div id="hud">
+  <div class="hp" id="hp-nav" data-l="NAV · MILKY WAY SECTOR">
+    <div>RA  <span class="val" id="hud-x">0 ls E</span></div>
+    <div>DEC <span class="val" id="hud-y">0 ls N</span></div>
+    <div>SPD <span class="val" id="hud-spd">0 ls/s</span> &nbsp; HDG <span class="val" id="hud-hdg">0</span>°</div>
+    <div style="margin-top:5px">FUEL <span class="bbar"><span class="bfill" id="bar-fuel" style="width:100%"></span></span> <span class="val" id="hud-fuel">100</span>%</div>
+    <div class="dim" id="hud-zone" style="margin-top:4px">OPEN SPACE</div>
+  </div>
+  <div class="hp" id="hp-ship" data-l="SHIP · STATUS">
+    <div>HULL <span class="bbar"><span class="bfill" id="bar-hull" style="width:100%"></span></span> <span class="val" id="hud-hull">100</span>%</div>
+    <div>ENGY <span class="bbar"><span class="bfill" id="bar-energy" style="width:100%"></span></span> <span class="val" id="hud-energy">100</span>%</div>
+    <div>HEAT <span class="bbar"><span class="bfill" id="bar-heat" style="width:0%"></span></span> <span class="val" id="hud-heat">0</span>%</div>
+    <div style="margin-top:4px" class="dim">LASER <span class="val" id="hud-laser">READY</span> &nbsp; SHIELD <span class="val" id="hud-shield">NONE</span></div>
+    <div class="dim">KILLS <span class="val" id="hud-kills">0</span> &nbsp; KARMA <span class="val" id="hud-karma">0</span></div>
+  </div>
+  <div class="hp" id="hp-cargo" data-l="CARGO · MANIFEST">
+    <div>HOLD <span class="val" id="hud-cu">0</span>/50 &nbsp; CREDITS <span class="val" id="hud-cr">1,500</span></div>
+    <div id="cargo-list" class="dim" style="margin-top:4px;font-size:10px">── EMPTY ──</div>
+  </div>
+  <div class="hp" id="hp-log" data-l="SYSTEM · LOG">
+    <div id="log-lines" style="font-size:10px;line-height:1.8"></div>
+  </div>
+
+  <svg id="xhair" width="44" height="44" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="13" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="5 4"/>
+    <circle cx="22" cy="22" r="2" fill="currentColor"/>
+    <line x1="22" y1="4" x2="22" y2="10" stroke="currentColor" stroke-width=".8"/>
+    <line x1="22" y1="34" x2="22" y2="40" stroke="currentColor" stroke-width=".8"/>
+    <line x1="4" y1="22" x2="10" y2="22" stroke="currentColor" stroke-width=".8"/>
+    <line x1="34" y1="22" x2="40" y2="22" stroke="currentColor" stroke-width=".8"/>
+    <path d="M8,8 L8,13 M8,8 L13,8" stroke="currentColor" stroke-width="1.2" fill="none"/>
+    <path d="M36,8 L36,13 M36,8 L31,8" stroke="currentColor" stroke-width="1.2" fill="none"/>
+    <path d="M8,36 L8,31 M8,36 L13,36" stroke="currentColor" stroke-width="1.2" fill="none"/>
+    <path d="M36,36 L36,31 M36,36 L31,36" stroke="currentColor" stroke-width="1.2" fill="none"/>
+  </svg>
+</div>
+
+<div id="trade-modal"><div id="trade-box">
+  <h2 id="trade-title">DOCKING INTERFACE</h2>
+  <div class="trow th"><span>COMMODITY</span><span>STOCK</span><span>BUY/u</span><span>SELL/u</span><span>OWNED</span><span></span></div>
+  <div id="trade-rows"></div>
+  <div style="margin-top:12px;font-size:10px;color:rgba(0,0,0,.35)">
+    FUEL: <span id="fuel-cost-label">–</span>
+    <button class="tbtn" id="btn-refuel" style="margin-left:8px">REFUEL</button>
+    &nbsp; HULL: <span id="repair-cost-label">–</span>
+    <button class="tbtn" id="btn-repair" style="margin-left:8px">REPAIR</button>
+  </div>
+  <div style="margin-top:6px;font-size:10px;color:rgba(0,0,0,.35)">
+    SHIELD: <span id="shield-cost-label">5,000 CR</span>
+    <button class="tbtn" id="btn-shield">INSTALL</button>
+  </div>
+  <div id="bounty-area" style="display:none;margin-top:10px;">
+    <div style="font-size:9px;color:rgba(0,0,0,.35);letter-spacing:.25em;border-top:1px solid rgba(0,0,0,.1);padding-top:8px;font-family:var(--fnt)">★ BOUNTY BOARD</div>
+    <div id="bounty-text" style="font-size:10px;color:rgba(0,0,0,.45);margin-top:6px;line-height:1.7"></div>
+    <button class="tbtn" id="btn-bounty" style="margin-top:6px">ACCEPT BOUNTY</button>
+  </div>
+  <div id="contract-panel">
+    <h3>DELIVERY CONTRACTS</h3>
+    <div id="contract-list"></div>
+    <button id="btn-cancel-contract" style="display:none;margin-top:10px;width:100%;padding:8px;border:1px solid rgba(200,0,0,.35);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:10px;letter-spacing:.1em;cursor:pointer">[ CANCEL ACTIVE CONTRACT ]</button>
+  </div>
+  <button id="trade-close">[ UNDOCK ]</button>
+</div></div>
+
+<div id="distress-modal"><div id="distress-box">
+  <h2>⚠ FUEL DEPLETED</h2>
+  <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:rgba(0,0,0,.4)">Caution: signal attracts hostiles.</span></p>
+  <button class="dbtn" id="btn-distress">SEND DISTRESS SIGNAL</button>
+  <button class="dbtn er" id="btn-drift">DRIFT (risky)</button>
+</div></div>
+
+<div id="stranded-modal"><div id="sbox">
+  <h2>⚠ DISTRESS BEACON</h2>
+  <div style="font-size:9px;color:rgba(0,0,0,.3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
+  <p>A stranded merchant requests assistance. Drive failure detected.</p>
+  <button class="tbtn" id="btn-help-parts"  style="display:block;width:100%;margin:5px 0;padding:8px">[ DELIVER PARTS · 5× PARTS → +1,500 CR ]</button>
+  <button class="tbtn" id="btn-help-escort" style="display:block;width:100%;margin:5px 0;padding:8px">[ ESCORT TO STATION → +2,000 CR ]</button>
+  <button class="tbtn sell" id="btn-loot"   style="display:block;width:100%;margin:5px 0;padding:8px;border-color:rgba(255,85,85,.35);color:var(--danger)">[ LOOT (−karma) ]</button>
+  <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.25)">[ IGNORE ]</button>
+</div></div>
+
+<div id="death-screen">
+  <h1>SHIP DESTROYED</h1>
+  <p>Respawning at HOME-STATION · 25% cargo jettisoned</p>
+  <button id="btn-respawn">[ RESPAWN ]</button>
+</div>
+
+<div id="msg-overlay"></div>
+<div id="event-banner"></div>
+
+<div id="pause-modal"><div id="pause-box">
+  <h2>PAUSED</h2>
+  <div class="sub">SYSTEM HALTED · [ESC] RESUME</div>
+  <div class="pause-stats">
+    <div>CREDITS  <span id="pause-credits">0</span> CR</div>
+    <div>KILLS    <span id="pause-kills">0</span></div>
+    <div>STATIONS <span id="pause-discovered">0</span></div>
+    <div>CONTRACTS<span id="pause-contracts">0</span></div>
+    <div>SEED     <span id="pause-seed">–</span></div>
+  </div>
+
+  <!-- ── VISUAL SETTINGS ── -->
+  <div id="pause-settings">
+    <div id="pause-settings-title">VISUAL CONFIG</div>
+    <!-- Dark / Light Mode -->
+    <div class="theme-row">
+      <span>DISPLAY MODE</span>
+      <div class="theme-toggle-wrap">
+        <span class="theme-label" id="lbl-light">LIGHT</span>
+        <label class="toggle-switch" title="Toggle Dark/Light mode">
+          <input type="checkbox" id="toggle-dark-mode">
+          <span class="toggle-track"></span>
+          <span class="toggle-knob"></span>
+        </label>
+        <span class="theme-label" id="lbl-dark">DARK</span>
+      </div>
+    </div>
+    <!-- Theme Color -->
+    <div class="color-row">
+      <span>ACCENT COLOR</span>
+      <div class="color-chips" id="color-chips">
+        <div class="color-chip active" data-color="cc4400" data-rgb="204,68,0"   style="background:#cc4400" title="Ember Orange"></div>
+        <div class="color-chip"       data-color="00cc88" data-rgb="0,204,136"   style="background:#00cc88" title="Neon Green"></div>
+        <div class="color-chip"       data-color="0088ff" data-rgb="0,136,255"   style="background:#0088ff" title="Cyber Blue"></div>
+        <div class="color-chip"       data-color="ff2244" data-rgb="255,34,68"   style="background:#ff2244" title="Hot Red"></div>
+        <div class="color-chip"       data-color="cc44ff" data-rgb="204,68,255"  style="background:#cc44ff" title="Void Purple"></div>
+        <div class="color-chip"       data-color="ffcc00" data-rgb="255,204,0"   style="background:#ffcc00" title="Solar Gold"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="pbtn" id="btn-resume">[ RESUME ]</button>
+  <button class="pbtn" id="btn-save-quit">[ SAVE &amp; QUIT ]</button>
+  <button class="pbtn dim" id="btn-pause-reset">[ ERASE SAVE ]</button>
+</div></div>
+
+<div id="boot">
+  <h1>VOIDTRADER</h1>
+  <div class="sub">MILKY WAY COMMERCE · WHITE SECTOR EDITION v2.1</div>
+  <div class="bl ok">KERNEL LOADED</div>
+  <div class="bl ok">CANVAS RENDERER READY</div>
+  <div class="bl ok">PROCEDURAL SECTOR ENGINE ONLINE</div>
+  <div class="bl ok">PHYSICS & COMBAT SUBSYSTEM READY</div>
+  <div class="bl ok">TRADING & CONTRACT MODULE ONLINE</div>
+  <div class="bl ok">ESCORT & DELIVERY SYSTEM READY</div>
+  <div class="bl ok">CARTOGRAPHY SYSTEM ONLINE</div>
+  <div class="bl ok">SAVE SYSTEM READY</div>
+  <div class="bl ok">SPEED MODE SYSTEM · MANEUVER / COSMIC</div>
+  <div class="bl ok">HYPERDRIVE & WORMHOLE ENGINE ONLINE</div>
+  <div class="bl ok">TRAJECTORY WARNING SYSTEM ACTIVE</div>
+  <button id="boot-start">[ LAUNCH SEQUENCE ]</button>
+  <button id="boot-reset">[ ERASE SAVE ]</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//
+//   VOIDTRADER · White Galaxy Mode  (Black ink on warm paper)
+//   v2.1 — fixed + AI-editing-optimised
+//
+//   SECTION MAP  (search for ## to jump between sections)
+//   ─────────────────────────────────────────────────────
+//   ## CONFIG          — all tuneable numbers in one object
+//   ## UTILS           — helpers: RNG, colour, geometry
+//   ## CANVAS SETUP    — canvas, resize, camera
+//   ## GALAXY BG       — offline galaxy texture + star layers
+//   ## SHIP            — ship state, physics, drawing
+//   ## STATIONS        — procedural generation, draw, docking
+//   ## CONTRACTS       — delivery contract system
+//   ## TRADING         — buy/sell, refuel, repair, shield
+//   ## CARGO & DROPS   — loot, cargo HUD
+//   ## ENEMIES         — pirate AI, laser fire
+//   ## METEORS         — meteors + splits
+//   ## BLACK HOLES     — singularity events
+//   ## SWARMS          — asteroid swarm events
+//   ## SHIELD          — shield subsystem
+//   ## STRANDED SHIPS  — escort / rescue missions
+//   ## BOSS            — alien boss + projectiles
+//   ## KARMA           — karma system
+//   ## MINIMAP         — minimap canvas
+//   ## HUD             — updateHUD, addLog
+//   ## UI HELPERS      — messages, banners, modal guard
+//   ## SAVE / LOAD     — localStorage save system
+//   ## KEYBOARD        — key bindings
+//   ## TOUCH           — mobile joystick + buttons
+//   ## GAMEPAD         — xbox controller mapping & inputs
+//   ## MAIN LOOP       — requestAnimationFrame loop
+//   ## BOOT            — boot screen handler
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
+
+// ── ## CONFIG ───────────────────────────────────────────────────────────────
+
+const CFG = {
+  CHUNK:       8000,
+  RADAR:       6000,
+  DOCK_PAD_R:  70,
+  DOCK_MAX_SPD:20,
+  SAFE_ZONE:   1500,
+  GRAV_RADIUS: 1500,
+  CRUISE_SPD:  180,
+
+  MANEUVER_THRUST:   520,
+  MANEUVER_MAX_SPD:  320,
+  MANEUVER_ROT:      3.4,
+  MANEUVER_CRUISE:   0,
+
+  COSMIC_THRUST:     420,
+  COSMIC_MAX_SPD:    1200,
+  COSMIC_ROT:        2.0,
+  COSMIC_CRUISE:     380,
+
+  TRAJ_WARN_DIST:    1800,
+  HYPERDRIVE_FUEL_COST_FRAC: 2/3,
+  HYPERDRIVE_SAFE_RADIUS:    900,
+
+  FUEL_MAX:    100,
+  FUEL_BURN:   0.35,
+
+  SHIP_THRUST: 280,
+  SHIP_MAX_SPD:440,
+  SHIP_ROT:    2.6,
+
+  LASER_HEAT:  14,
+  LASER_ENERGY:6,
+  LASER_CD:    0.18,
+  LASER_LEN:   700,
+
+  SHIELD_COST:   5000,
+  SHIELD_DRAIN:  35,
+
+  CARGO_MAX:   50,
+  FUEL_PRICE:  12,
+  SELL_RATIO:  0.80,
+
+  ENEMY_CAP:   4,
+  ENEMY_SPAWN_INTERVAL: 14,
+
+  METEOR_CAP:  3,
+  METEOR_SPAWN_INTERVAL_MIN: 18,
+  METEOR_SPAWN_INTERVAL_MAX: 40,
+  METEOR_SPAWN_COUNT_MIN:    1,
+  METEOR_SPAWN_COUNT_MAX:    2,
+
+  SWARM_CAP:   3,
+  SWARM_WARN:  5,
+
+  BH_CAP:      3,
+  BH_PULL:     600,
+  BH_ESC:      180,
+
+  STRANDED_CAP:3,
+  STRANDED_TTL:120,
+  PARTS_REWARD:1500,
+  ESCORT_REWARD:2000,
+
+  BOSS_HULL:   600,
+  BOUNTY_COST: 2000,
+  BOUNTY_REWARD:15000,
+
+  START_CREDITS: 1500,
+};
+
+
+// ── ## UTILS ────────────────────────────────────────────────────────────────
+
+function makePRNG(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function wa(hex, a) {
+  if (!hex || hex.length < 7) return `rgba(0,0,0,${a})`;
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function lineCircle(x1, y1, x2, y2, cx, cy, cr) {
+  const dx = x2-x1, dy = y2-y1, fx = x1-cx, fy = y1-cy;
+  const a = dx*dx + dy*dy;
+  const b = 2*(fx*dx + fy*dy);
+  const c = fx*fx + fy*fy - cr*cr;
+  let d = b*b - 4*a*c;
+  if (d < 0) return false;
+  d = Math.sqrt(d);
+  const t1 = (-b-d)/(2*a), t2 = (-b+d)/(2*a);
+  return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
+}
+
+function fmtDist(d) {
+  if (d < 1000)    return Math.floor(d) + ' ls';
+  if (d < 1000000) return (d/1000).toFixed(2) + ' kls';
+  return (d/31557.6).toFixed(1) + ' ly';
+}
+
+function angleDiff(a, b) {
+  let d = a - b;
+  while (d >  Math.PI) d -= Math.PI*2;
+  while (d < -Math.PI) d += Math.PI*2;
+  return d;
+}
+
+
+// ── ## CANVAS SETUP ─────────────────────────────────────────────────────────
+
+const canvas  = document.getElementById('canvas');
+const ctx     = canvas.getContext('2d');
+const mmCv    = document.getElementById('minimap');
+const mmx     = mmCv.getContext('2d');
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const isMobile= isTouch && window.innerWidth <= 1024;
+
+// ── ## THEME SYSTEM ──────────────────────────────────────────────────────────
+
+const THEMES = {
+  light: {
+    bg:'#f5f3ee', panel:'rgba(245,243,238,0.92)',
+    ink:'#000000', ink2:'#333333', ink3:'#777777', ink4:'#bbbbbb',
+    safe:'#006600', warn:'#cc6600', danger:'#cc0000',
+  },
+  dark: {
+    bg:'#0d0c10', panel:'rgba(13,12,16,0.92)',
+    ink:'#e8e4dc', ink2:'#aaa49a', ink3:'#666060', ink4:'#333030',
+    safe:'#22cc44', warn:'#ddaa00', danger:'#ff3333',
+  }
+};
+
+// Accent color presets — contrasting variants for each mode
+const ACCENT_PRESETS = {
+  'cc4400': { light:'#cc4400', dark:'#ff6622', rgb:'204,68,0'   },
+  '00cc88': { light:'#008855', dark:'#00cc88', rgb:'0,204,136'  },
+  '0088ff': { light:'#005fcc', dark:'#33aaff', rgb:'0,136,255'  },
+  'ff2244': { light:'#cc0033', dark:'#ff3355', rgb:'255,34,68'  },
+  'cc44ff': { light:'#9911cc', dark:'#cc44ff', rgb:'204,68,255' },
+  'ffcc00': { light:'#bb8800', dark:'#ffcc00', rgb:'255,204,0'  },
+};
+
+let currentTheme    = localStorage.getItem('vt_theme')   || 'light';
+let currentAccentKey= localStorage.getItem('vt_accent')  || 'cc4400';
+
+const PAL = {
+  bg:'#f5f3ee', ink:'#000000', ink2:'#555555', ink3:'#999999', ink4:'#cccccc',
+  safe:'#006600', warn:'#cc6600', danger:'#cc0000', accent:'#cc4400',
+};
+
+function applyTheme(theme, accentKey) {
+  currentTheme     = theme;
+  currentAccentKey = accentKey;
+  localStorage.setItem('vt_theme',  theme);
+  localStorage.setItem('vt_accent', accentKey);
+
+  const t = THEMES[theme];
+  const a = ACCENT_PRESETS[accentKey] || ACCENT_PRESETS['cc4400'];
+  const accentVal = a[theme]; // light or dark variant
+
+  // Update PAL for canvas drawing
+  PAL.bg      = t.bg;
+  PAL.ink     = t.ink;
+  PAL.ink2    = t.ink2;
+  PAL.ink3    = t.ink3;
+  PAL.ink4    = t.ink4;
+  PAL.safe    = t.safe;
+  PAL.warn    = t.warn;
+  PAL.danger  = t.danger;
+  PAL.accent  = accentVal;
+
+  // Update CSS variables
+  const r = document.documentElement.style;
+  r.setProperty('--bg',     t.bg);
+  r.setProperty('--panel',  t.panel);
+  r.setProperty('--ink',    t.ink);
+  r.setProperty('--ink2',   t.ink2);
+  r.setProperty('--ink3',   t.ink3);
+  r.setProperty('--ink4',   t.ink4);
+  r.setProperty('--safe',   t.safe);
+  r.setProperty('--warn',   t.warn);
+  r.setProperty('--danger', t.danger);
+  r.setProperty('--accent', accentVal);
+  r.setProperty('--accent-rgb', a.rgb);
+
+  // Toggle dark mode class for :root
+  document.documentElement.classList.toggle('dark-mode', theme === 'dark');
+
+  // Rebuild galaxy for new theme
+  if (galaxyCanvas) buildGalaxy();
+  rebuildStarColors();
+}
+
+function rebuildStarColors() {
+  // Update star colors based on mode
+  for (const layer of starLayers) {
+    for (const s of layer) {
+      if (currentTheme === 'dark') {
+        s.col = Math.random() < .15 ? '200,190,255' : Math.random() < .08 ? '255,230,180' : '220,220,240';
+      } else {
+        s.col = Math.random() < .15 ? '35,28,55' : Math.random() < .08 ? '55,40,25' : '20,20,25';
+      }
+    }
+  }
+}
+
+const SEED = parseInt(localStorage.getItem('vt_seed')) || (Math.random()*0xFFFFFF|0);
+localStorage.setItem('vt_seed', SEED);
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = window.innerWidth, H = window.innerHeight;
+  canvas.width  = W; canvas.height = H;
+  if (dpr > 1 && isTouch) {
+    canvas.width  = Math.floor(W*dpr); canvas.height = Math.floor(H*dpr);
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.scale(dpr, dpr);
+  }
+  if (mmCv.classList.contains('fullscreen')) { mmCv.width = W; mmCv.height = H; }
+  const jz = document.getElementById('joystick-zone');
+  if (jz) { const sz = W<=480 ? 110 : 130; jz.style.width = sz+'px'; jz.style.height = sz+'px'; }
+}
+window.addEventListener('resize', () => { resize(); ctx.resetTransform?.(); resize(); });
+resize();
+
+const cam = { x:0, y:0 };
+const wx = x => canvas.width/2  + (x - cam.x);
+const wy = y => canvas.height/2 + (y - cam.y);
+
+
+// ── ## GALAXY BG ────────────────────────────────────────────────────────────
+
+let galaxyCanvas = null;
+
+function buildGalaxy() {
+  const rng = makePRNG(SEED ^ 0xDEAD);
+  const isDark = currentTheme === 'dark';
+  const GW = 2048, GH = 2048;
+  const gc = document.createElement('canvas');
+  gc.width = GW; gc.height = GH;
+  const gx = gc.getContext('2d');
+
+  // Background fill
+  gx.fillStyle = isDark ? '#0a090e' : '#f5f3ee';
+  gx.fillRect(0, 0, GW, GH);
+
+  // Subtle central glow
+  if (isDark) {
+    const grd = gx.createRadialGradient(GW/2, GH/2, 0, GW/2, GH/2, 700);
+    grd.addColorStop(0,   'rgba(40,30,60,0.55)');
+    grd.addColorStop(0.4, 'rgba(25,20,40,0.25)');
+    grd.addColorStop(1,   'rgba(0,0,0,0)');
+    gx.fillStyle = grd;
+    gx.fillRect(0, 0, GW, GH);
+  }
+
+  // Spiral arms
+  for (let arm = 0; arm < 5; arm++) {
+    const armAngle = (arm/5) * Math.PI*2;
+    for (let i = 0; i < 1800; i++) {
+      const t = rng();
+      const r = 60 + t*860;
+      const twist  = t*Math.PI*2.8 + armAngle;
+      const spread = (rng()-.5)*80*(1 + t*.6);
+      const px = GW/2 + Math.cos(twist)*r + Math.cos(twist+Math.PI/2)*spread;
+      const py = GH/2 + Math.sin(twist)*r + Math.sin(twist+Math.PI/2)*spread;
+      const alpha = (.015 + rng()*.025) * (1 - t*.5);
+      gx.beginPath(); gx.arc(px, py, 0.8 + rng()*2.5, 0, Math.PI*2);
+      if (isDark) {
+        gx.fillStyle = rng()<.6 ? `rgba(180,170,220,${alpha*1.8})` : `rgba(160,180,255,${alpha*1.5})`;
+      } else {
+        gx.fillStyle = rng()<.6 ? `rgba(160,145,130,${alpha})` : `rgba(140,130,155,${alpha})`;
+      }
+      gx.fill();
+    }
+  }
+
+  // Dense core
+  for (let i = 0; i < 3000; i++) {
+    const a = rng()*Math.PI*2, r = Math.pow(rng(), 2)*200;
+    const px = GW/2 + Math.cos(a)*r, py = GH/2 + Math.sin(a)*r;
+    gx.beginPath(); gx.arc(px, py, rng()*1.8+.3, 0, Math.PI*2);
+    if (isDark) {
+      gx.fillStyle = `rgba(220,200,255,${.012 + rng()*.025})`;
+    } else {
+      gx.fillStyle = `rgba(180,165,140,${.008 + rng()*.018})`;
+    }
+    gx.fill();
+  }
+
+  // Background stars
+  const starCount = isDark ? 6000 : 4000;
+  for (let i = 0; i < starCount; i++) {
+    const px = rng()*GW, py = rng()*GH;
+    const sz = rng() < .04 ? rng()*1.4+.6 : rng()*.6+.15;
+    gx.beginPath(); gx.arc(px, py, sz, 0, Math.PI*2);
+    if (isDark) {
+      const brightness = rng()*.85 + .1;
+      gx.fillStyle = `rgba(${Math.floor(200+rng()*55)},${Math.floor(200+rng()*55)},${Math.floor(220+rng()*35)},${brightness})`;
+    } else {
+      gx.fillStyle = `rgba(30,25,40,${rng()*.55+.12})`;
+    }
+    gx.fill();
+  }
+
+  // Bright foreground stars for dark mode
+  if (isDark) {
+    for (let i = 0; i < 150; i++) {
+      const px = rng()*GW, py = rng()*GH;
+      const sz = rng()*2.2 + 0.8;
+      gx.beginPath(); gx.arc(px, py, sz, 0, Math.PI*2);
+      gx.fillStyle = `rgba(255,255,255,${rng()*.9+0.3})`;
+      gx.fill();
+      // Tiny cross sparkle for brightest
+      if (sz > 2.5) {
+        gx.strokeStyle = `rgba(255,255,255,0.4)`;
+        gx.lineWidth = 0.5;
+        gx.beginPath(); gx.moveTo(px-4,py); gx.lineTo(px+4,py); gx.stroke();
+        gx.beginPath(); gx.moveTo(px,py-4); gx.lineTo(px,py+4); gx.stroke();
+      }
+    }
+  }
+
+  galaxyCanvas = gc;
+  drawGalaxyBgCanvas();
+}
+
+// Draw galaxy to the dedicated background canvas
+function drawGalaxyBgCanvas() {
+  const bgCv = document.getElementById('galaxy-bg');
+  if (!bgCv || !galaxyCanvas) return;
+  bgCv.width  = window.innerWidth;
+  bgCv.height = window.innerHeight;
+  const bgCtx = bgCv.getContext('2d');
+  const GW = galaxyCanvas.width, GH = galaxyCanvas.height;
+  const ox = (((-cam.x*0.02) % GW) + GW) % GW;
+  const oy = (((-cam.y*0.02) % GH) + GH) % GH;
+  bgCtx.clearRect(0, 0, bgCv.width, bgCv.height);
+  bgCtx.globalAlpha = currentTheme === 'dark' ? 1.0 : 0.7;
+  for (let tx = 0; tx <= 1; tx++) for (let ty = 0; ty <= 1; ty++) {
+    bgCtx.drawImage(galaxyCanvas, ox + tx*GW - GW, oy + ty*GH - GH, GW, GH);
+  }
+  bgCtx.globalAlpha = 1;
+}
+
+const starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
+  const rng   = makePRNG(SEED + li*777);
+  const count = [40, 60, 80, 35][li];
+  return Array.from({ length: count }, () => ({
+    nx: rng(), ny: rng(),
+    size:  li===3 ? rng()*1.4+0.5 : rng()*(li===2?1.0:0.6)+0.15,
+    alpha: rng()*(li===3?.7:.5)+.1,
+    par,
+    // col gets updated when theme changes via rebuildStarColors()
+    col: rng()<.15 ? '35,28,55' : rng()<.08 ? '55,40,25' : '20,20,25',
+  }));
+});
+
+function drawGalaxy() {
+  // No-op: galaxy is drawn on separate #galaxy-bg canvas
+  // We update that canvas here for parallax scroll
+  if (!galaxyCanvas) return;
+  drawGalaxyBgCanvas();
+}
+
+function drawStars() {
+  const isDark = currentTheme === 'dark';
+  for (const layer of starLayers) for (const s of layer) {
+    const ox = ((s.nx*canvas.width  - cam.x*s.par) % canvas.width  + canvas.width)  % canvas.width;
+    const oy = ((s.ny*canvas.height - cam.y*s.par) % canvas.height + canvas.height) % canvas.height;
+    ctx.beginPath(); ctx.arc(ox, oy, s.size, 0, Math.PI*2);
+    // Dark: bright stars on dark; Light: subtle dark dots on warm bg
+    const alphaScale = isDark ? 1.6 : 0.7;
+    ctx.fillStyle = `rgba(${s.col},${Math.min(s.alpha*alphaScale, 1)})`; ctx.fill();
+  }
+}
+
+function drawGrid() {
+  const G = 600;
+  const ox = (((-cam.x%G)+G)%G), oy = (((-cam.y%G)+G)%G);
+  ctx.strokeStyle = wa(PAL.ink, .04); ctx.lineWidth = .5;
+  for (let x=ox; x<canvas.width;  x+=G) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (let y=oy; y<canvas.height; y+=G) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+  const G2 = G/3;
+  const ox2 = (((-cam.x%G2)+G2)%G2), oy2 = (((-cam.y%G2)+G2)%G2);
+  ctx.strokeStyle = wa(PAL.ink, .015);
+  for (let x=ox2; x<canvas.width;  x+=G2) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (let y=oy2; y<canvas.height; y+=G2) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+}
+
+
+// ── ## SHIP ─────────────────────────────────────────────────────────────────
+
+const ship = {
+  x:0, y:0, vx:0, vy:0, angle:0,
+  thrust:    CFG.SHIP_THRUST,
+  maxSpeed:  CFG.SHIP_MAX_SPD,
+  rotSpeed:  CFG.SHIP_ROT,
+  fuel:      CFG.FUEL_MAX,
+  hull:      100, energy:100, heat:0,
+  credits:   CFG.START_CREDITS,
+  kills:     0,
+  cargo:     {},
+  cargoMax:  CFG.CARGO_MAX,
+  laserCooldown: 0,
+  laserBeam: null,
+  isDead:    false,
+  invincible:0,
+  hasShield: false,
+  shieldActive: false,
+  speedMode: 'MANEUVER',
+  cosmicBoostTime: 0,
+};
+
+function setSpeedMode(mode) {
+  if (mode === ship.speedMode) return;
+  ship.speedMode = mode;
+  ship.cosmicBoostTime = 0;
+  applySpeedModeStats();
+  document.getElementById('smode-maneuver').classList.toggle('active', mode === 'MANEUVER');
+  document.getElementById('smode-cosmic').classList.toggle('active', mode === 'COSMIC');
+  document.getElementById('smode-label').textContent = mode === 'MANEUVER' ? 'MANEUVERING' : 'COSMIC SPEED';
+  addLog('Speed mode: ' + (mode === 'MANEUVER' ? 'MANEUVERING' : 'COSMIC CRUISE'));
+}
+
+function applySpeedModeStats() {
+  if (ship.speedMode === 'MANEUVER') {
+    ship.thrust   = CFG.MANEUVER_THRUST;
+    ship.maxSpeed = CFG.MANEUVER_MAX_SPD;
+    ship.rotSpeed = CFG.MANEUVER_ROT;
+  } else {
+    ship.thrust   = CFG.COSMIC_THRUST;
+    ship.maxSpeed = CFG.COSMIC_MAX_SPD;
+    ship.rotSpeed = CFG.COSMIC_ROT;
+  }
+}
+applySpeedModeStats();
+
+let _trajWarnActive = false;
+function checkTrajectoryWarning() {
+  if (ship.speedMode !== 'COSMIC') { setTrajWarn(false); return; }
+  const spd = Math.hypot(ship.vx, ship.vy);
+  if (spd < 100) { setTrajWarn(false); return; }
+
+  const nx = Math.sin(ship.angle), ny = -Math.cos(ship.angle);
+  const x1 = ship.x, y1 = ship.y;
+  const x2 = ship.x + nx * CFG.TRAJ_WARN_DIST;
+  const y2 = ship.y + ny * CFG.TRAJ_WARN_DIST;
+
+  let hit = false;
+  for (const m of meteors) {
+    if (m.dead) continue;
+    if (lineCircle(x1, y1, x2, y2, m.x, m.y, m.r + 30)) { hit = true; break; }
+  }
+  if (!hit) {
+    for (const s of swarms) {
+      if (s.state !== 'active') continue;
+      for (const r of s.rocks) {
+        if (lineCircle(x1, y1, x2, y2, s.cx+r.ox, s.cy+r.oy, r.r + 20)) { hit = true; break; }
+      }
+      if (hit) break;
+    }
+  }
+  setTrajWarn(hit);
+}
+
+function setTrajWarn(active) {
+  if (active === _trajWarnActive) return;
+  _trajWarnActive = active;
+  document.getElementById('traj-warning').classList.toggle('active', active);
+  if (active) playTrajBeep();
+}
+
+function playTrajBeep() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.type = 'square'; osc.frequency.value = 880;
+    g.gain.setValueAtTime(0.04, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime + 0.18);
+  } catch(e) {}
+}
+
+let wormholeState = null;
+const wormholeCv  = document.getElementById('wormhole-canvas');
+const wormholeCtx = wormholeCv.getContext('2d');
+
+function resizeWormhole() {
+  wormholeCv.width  = window.innerWidth;
+  wormholeCv.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeWormhole);
+resizeWormhole();
+
+function startWormhole(phase, onComplete) {
+  wormholeState = { phase, timer: 0, duration: 1.4, onComplete };
+  document.getElementById('wormhole-overlay').classList.add('active');
+}
+
+function updateWormhole(dt) {
+  if (!wormholeState) return;
+  wormholeState.timer += dt;
+  const t  = wormholeState.timer / wormholeState.duration;
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+
+  wormholeCtx.clearRect(0, 0, wormholeCv.width, wormholeCv.height);
+  const progress = wormholeState.phase === 'enter' ? Math.min(t, 1) : Math.max(1 - t, 0);
+
+  const maxR = Math.hypot(cx, cy) * 1.4;
+  const innerR = progress * maxR * 0.6;
+  const outerR = progress * maxR * 1.1;
+  const grad = wormholeCtx.createRadialGradient(cx, cy, innerR * 0.1, cx, cy, outerR);
+  grad.addColorStop(0,   `rgba(0,0,0,${progress * 0.97})`);
+  grad.addColorStop(0.6, `rgba(0,0,0,${progress * 0.75})`);
+  grad.addColorStop(1,   `rgba(0,0,0,0)`);
+  wormholeCtx.beginPath(); wormholeCtx.arc(cx, cy, outerR, 0, Math.PI * 2);
+  wormholeCtx.fillStyle = grad; wormholeCtx.fill();
+
+  const now = Date.now() * 0.001;
+  const ringCount = 14;
+  for (let i = 0; i < ringCount; i++) {
+    const frac = i / ringCount;
+    const r    = frac * innerR * (0.4 + progress * 0.6);
+    const spin = now * (4 + frac * 8) * (wormholeState.phase === 'enter' ? 1 : -1);
+    const alpha = progress * (1 - frac * 0.5) * 0.9;
+    wormholeCtx.beginPath();
+    wormholeCtx.arc(cx, cy, r, spin, spin + Math.PI * 1.6);
+    wormholeCtx.strokeStyle = `rgba(100,80,60,${alpha})`;
+    wormholeCtx.lineWidth   = 1 + frac * 2;
+    wormholeCtx.stroke();
+    if (i % 3 === 0) {
+      wormholeCtx.beginPath();
+      wormholeCtx.arc(cx, cy, r * 0.95, spin + 0.4, spin + 0.85);
+      wormholeCtx.strokeStyle = `rgba(200,150,80,${alpha * 0.8})`;
+      wormholeCtx.lineWidth   = 0.8;
+      wormholeCtx.stroke();
+    }
+  }
+
+  if (progress > 0.1) {
+    const cg = wormholeCtx.createRadialGradient(cx, cy, 0, cx, cy, innerR * 0.25);
+    cg.addColorStop(0, `rgba(255,200,100,${progress * 0.5})`);
+    cg.addColorStop(1, `rgba(0,0,0,0)`);
+    wormholeCtx.beginPath(); wormholeCtx.arc(cx, cy, innerR * 0.25, 0, Math.PI * 2);
+    wormholeCtx.fillStyle = cg; wormholeCtx.fill();
+  }
+
+  for (let i = 0; i < 60; i++) {
+    const a   = (i / 60) * Math.PI * 2 + now * 0.5;
+    const r1  = innerR * 0.3 * (0.5 + 0.5 * Math.sin(a * 3 + now));
+    const r2  = r1 + 20 + innerR * 0.2;
+    wormholeCtx.beginPath();
+    wormholeCtx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    wormholeCtx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    wormholeCtx.strokeStyle = `rgba(200,180,140,${progress * 0.25})`;
+    wormholeCtx.lineWidth   = 0.6;
+    wormholeCtx.stroke();
+  }
+
+  if (wormholeState.timer >= wormholeState.duration) {
+    if (wormholeState.onComplete) wormholeState.onComplete();
+    if (wormholeState.phase === 'exit') {
+      wormholeState = null;
+      document.getElementById('wormhole-overlay').classList.remove('active');
+      wormholeCtx.clearRect(0, 0, wormholeCv.width, wormholeCv.height);
+    } else {
+      wormholeState = null;
+    }
+  }
+}
+
+function openHyperdriveMenu() {
+  if (isPaused || ship.isDead) return;
+  const jumpCost = Math.ceil(CFG.FUEL_MAX * CFG.HYPERDRIVE_FUEL_COST_FRAC);
+  document.getElementById('hd-fuel-cost').textContent    = jumpCost;
+  document.getElementById('hd-fuel-current').textContent = Math.floor(ship.fuel) + ' / ' + CFG.FUEL_MAX;
+  const canJump = ship.fuel >= jumpCost;
+  document.getElementById('hd-no-fuel-msg').style.display = canJump ? 'none' : 'block';
+
+  const destList = document.getElementById('hyperdrive-dest-list');
+  destList.innerHTML = '';
+  const stations = [homeStation, ...Array.from(stCache.values()).filter(s => s && s.discovered && s !== homeStation)];
+
+  if (stations.length <= 1) {
+    destList.innerHTML = '<div style="color:rgba(0,0,0,.35);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
+  } else {
+    stations.forEach(st => {
+      if (!st) return;
+      const dist    = Math.hypot(ship.x - st.x, ship.y - st.y);
+      const isCur   = dist < 200;
+      if (isCur) return;
+      const div = document.createElement('div');
+      div.className = 'hd-dest' + (!canJump ? ' no-fuel' : '');
+      div.innerHTML = `<span class="hd-name">${st.isHome ? 'HOME STATION' : st.name}</span>
+        <span class="hd-dist">${fmtDist(Math.floor(dist))}</span>
+        <span class="hd-jump">${canJump ? '▶ JUMP' : 'NO FUEL'}</span>`;
+      if (canJump) div.onclick = () => initiateHyperdrive(st);
+      destList.appendChild(div);
+    });
+  }
+  document.getElementById('hyperdrive-modal').classList.add('open');
+}
+
+function initiateHyperdrive(targetStation) {
+  const jumpCost = Math.ceil(CFG.FUEL_MAX * CFG.HYPERDRIVE_FUEL_COST_FRAC);
+  if (ship.fuel < jumpCost) { addLog('Insufficient fuel for hyperdrive'); return; }
+
+  document.getElementById('hyperdrive-modal').classList.remove('open');
+  ship.fuel -= jumpCost;
+  ship.vx = 0; ship.vy = 0;
+  addLog('HYPERDRIVE ENGAGED · JUMP TO ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
+  showEventBanner('HYPERDRIVE JUMP', 'Engaging wormhole · brace for transit');
+
+  startWormhole('enter', () => {
+    const jumpAngle = Math.random() * Math.PI * 2;
+    ship.x = targetStation.x + Math.cos(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
+    ship.y = targetStation.y + Math.sin(jumpAngle) * CFG.HYPERDRIVE_SAFE_RADIUS;
+    ship.vx = 0; ship.vy = 0;
+    ship.invincible = 4;
+    cam.x = ship.x; cam.y = ship.y;
+    if (!targetStation.discovered) {
+      targetStation.discovered = true;
+      if (targetStation.key) discovered.add(targetStation.key);
+    }
+    addLog('Transit complete · arrived near ' + (targetStation.isHome ? 'HOME STATION' : targetStation.name));
+    setTimeout(() => startWormhole('exit', null), 60);
+  });
+}
+
+document.getElementById('hyperdrive-close').addEventListener('click', () => {
+  document.getElementById('hyperdrive-modal').classList.remove('open');
+});
+
+const cargoTotal = () => Object.values(ship.cargo).reduce((a,b)=>a+b, 0);
+
+function updateShip(dt) {
+  if (ship.isDead || modalOpen()) return;
+
+  if (keys['KeyA'] || keys['ArrowLeft'])  ship.angle -= ship.rotSpeed * dt;
+  if (keys['KeyD'] || keys['ArrowRight']) ship.angle += ship.rotSpeed * dt;
+
+  const thrusting = (keys['KeyW'] || keys['ArrowUp']) && ship.fuel > 0;
+  if (thrusting) {
+    if (ship.speedMode === 'COSMIC') {
+      ship.cosmicBoostTime = Math.min(ship.cosmicBoostTime + dt, 5.0);
+      const boostMult = Math.pow(2.0, ship.cosmicBoostTime * 1.1);
+      ship.vx += Math.sin(ship.angle) * ship.thrust * boostMult * dt;
+      ship.vy -= Math.cos(ship.angle) * ship.thrust * boostMult * dt;
+    } else {
+      ship.vx += Math.sin(ship.angle) * ship.thrust * dt;
+      ship.vy -= Math.cos(ship.angle) * ship.thrust * dt;
+    }
+    ship.fuel = Math.max(0, ship.fuel - CFG.FUEL_BURN * dt);
+  } else {
+    ship.cosmicBoostTime = Math.max(0, ship.cosmicBoostTime - dt * 2.5);
+  }
+
+  if (keys['KeyS'] || keys['ArrowDown']) {
+    ship.vx *= Math.pow(.88, dt*60);
+    ship.vy *= Math.pow(.88, dt*60);
+  }
+
+  if (keys['Space']) fireLaser();
+
+  let nearestStDist = Infinity;
+  for (const st of allNearby()) {
+    const d = Math.hypot(ship.x-st.x, ship.y-st.y);
+    if (d < nearestStDist) nearestStDist = d;
+  }
+  const inGrav = nearestStDist < CFG.GRAV_RADIUS;
+  if (inGrav) {
+    const ds = 1 - (nearestStDist / CFG.GRAV_RADIUS);
+    const dm = .985 - ds*.035;
+    ship.vx *= Math.pow(dm, dt*60);
+    ship.vy *= Math.pow(dm, dt*60);
+  }
+
+  const spd = Math.hypot(ship.vx, ship.vy);
+  if (spd > ship.maxSpeed) { ship.vx=(ship.vx/spd)*ship.maxSpeed; ship.vy=(ship.vy/spd)*ship.maxSpeed; }
+
+  const cruiseFloor = ship.speedMode === 'COSMIC' ? CFG.COSMIC_CRUISE : CFG.MANEUVER_CRUISE;
+  if (!inGrav && !(keys['KeyS'] || keys['ArrowDown']) && cruiseFloor > 0) {
+    if (spd < cruiseFloor && spd > 5) {
+      const b = cruiseFloor / spd;
+      ship.vx *= b; ship.vy *= b;
+    } else if (spd <= 5) {
+      ship.vx = Math.sin(ship.angle) * cruiseFloor;
+      ship.vy = -Math.cos(ship.angle) * cruiseFloor;
+    }
+  }
+  if (ship.speedMode === 'MANEUVER' && !inGrav && !(keys['KeyS'] || keys['ArrowDown']) && !thrusting) {
+    ship.vx *= Math.pow(0.992, dt * 60);
+    ship.vy *= Math.pow(0.992, dt * 60);
+    if (spd < 2) { ship.vx = 0; ship.vy = 0; }
+  }
+
+  ship.x += ship.vx * dt;
+  ship.y += ship.vy * dt;
+  cam.x = ship.x; cam.y = ship.y;
+
+  if (ship.laserCooldown > 0) ship.laserCooldown -= dt;
+  if (ship.laserBeam) { ship.laserBeam.ttl -= dt; if (ship.laserBeam.ttl <= 0) ship.laserBeam = null; }
+  ship.heat   = Math.max(0, ship.heat - 16*dt);
+  ship.energy = Math.min(100, ship.energy + 14*dt);
+  if (ship.heat >= 100) ship.laserCooldown = Math.max(ship.laserCooldown, 2.2);
+  if (ship.invincible > 0) ship.invincible -= dt;
+
+  for (const [ccx, ccy] of visChunks(2)) {
+    const st = getStation(ccx, ccy);
+    if (st && !st.discovered && Math.hypot(ship.x-st.x, ship.y-st.y) < CFG.RADAR*.6) {
+      st.discovered = true;
+      discovered.add(st.key);
+      addLog('Station discovered: ' + st.name + (st.isBounty ? ' [BOUNTY]' : ''));
+    }
+  }
+
+  checkFuel(dt);
+  updateContractHUD();
+  checkTrajectoryWarning();
+}
+
+function drawShipAt(s, sx, sy, col, isPlayer) {
+  col = col || PAL.ink;
+  ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.angle);
+
+  if (isPlayer && (keys['KeyW']||keys['ArrowUp']) && s.fuel > 0) {
+    const f  = .7 + Math.random()*.3;
+    const boostScale = s.speedMode === 'COSMIC' ? 1 + s.cosmicBoostTime * 0.7 : 1;
+    const pl = (10 + 20*f) * boostScale;
+    const pw = boostScale;
+    ctx.beginPath(); ctx.moveTo(-7*pw,14); ctx.lineTo(0,14+pl*1.15); ctx.lineTo(7*pw,14);
+    ctx.strokeStyle = wa(PAL.accent, Math.min(.25, .1*f*boostScale)); ctx.lineWidth = 8*pw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4*pw,14); ctx.lineTo(0,14+pl);      ctx.lineTo(4*pw,14);
+    ctx.strokeStyle = wa(PAL.accent, .4*f); ctx.lineWidth = 2.5*pw; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2,14); ctx.lineTo(0,14+pl*.55); ctx.lineTo(2,14);
+    ctx.strokeStyle = wa(PAL.ink, .75*f);  ctx.lineWidth = 1.2;  ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(0,-22); ctx.lineTo(4,-12); ctx.lineTo(13,7); ctx.lineTo(8,14);
+  ctx.lineTo(4,9);   ctx.lineTo(0,16);  ctx.lineTo(-4,9); ctx.lineTo(-8,14);
+  ctx.lineTo(-13,7); ctx.lineTo(-4,-12); ctx.closePath();
+  ctx.fillStyle = wa(col, .05); ctx.fill();
+  ctx.strokeStyle = col; ctx.lineWidth = isPlayer ? 1.4 : 1; ctx.stroke();
+
+  ctx.beginPath(); ctx.moveTo(-2.5,-13); ctx.lineTo(0,-20); ctx.lineTo(2.5,-13);
+  ctx.strokeStyle = isPlayer ? PAL.accent : wa(col, .6); ctx.lineWidth = .9; ctx.stroke();
+
+  ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(11,5); ctx.moveTo(-4,-10); ctx.lineTo(-11,5);
+  ctx.strokeStyle = wa(col, .3); ctx.lineWidth = .7; ctx.stroke();
+
+  if (isPlayer && s.invincible > 0) {
+    ctx.beginPath(); ctx.arc(0, 0, 27, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.ink, .2 + .15*Math.sin(Date.now()*.01));
+    ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawVelVec() {
+  const spd = Math.hypot(ship.vx, ship.vy); if (spd < 8) return;
+  const sx = wx(ship.x), sy = wy(ship.y);
+  const len = Math.min(spd*.12, 60);
+  const nx = ship.vx/spd, ny = ship.vy/spd;
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx+nx*len, sy+ny*len);
+  ctx.strokeStyle = wa(PAL.accent, .5); ctx.lineWidth = .8; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(sx+nx*len, sy+ny*len, 2.5, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.accent, .6); ctx.fill();
+}
+
+function killShip() {
+  if (ship.isDead) return;
+  ship.isDead = true;
+  for (const [g, q] of Object.entries(ship.cargo)) {
+    const loss = Math.ceil(q*.25);
+    ship.cargo[g] = q - loss;
+    if (ship.cargo[g] <= 0) delete ship.cargo[g];
+    if (loss > 0) drops.push({ x:ship.x+(Math.random()-.5)*200, y:ship.y+(Math.random()-.5)*200, good:g, qty:loss, ttl:3000, isSignal:true });
+  }
+  if (activeContract) { addLog('Contract lost on destruction'); activeContract = null; updateContractHUD(); }
+  document.getElementById('death-screen').classList.add('open');
+}
+
+document.getElementById('btn-respawn').addEventListener('click', () => {
+  ship.isDead = false; ship.hull = 50; ship.fuel = 60; ship.energy = 100; ship.heat = 0;
+  ship.x = 0; ship.y = -500; ship.vx = 0; ship.vy = 0; ship.angle = 0; ship.invincible = 5;
+  enemies.length = 0; spawnTimer = 0; meteors.length = 0;
+  document.getElementById('death-screen').classList.remove('open');
+  addLog('Respawned · hull 50% · fuel 60%');
+});
+
+
+// ── ## STATIONS ──────────────────────────────────────────────────────────────
+
+const ST_NAMES = ['ALPHA','BETA','GAMMA','DELTA','EPSILON','VEGA','SIRIUS','LYRA','CYGNUS','ORION','KEPLER','HAVEN','NEXUS','VOID','EDGE','DRIFT','NOVA','PULSAR','QUASAR','ZENITH','ARES','TITAN','KRONOS','HERMES'];
+const GOODS = ['ORE','TECH','FOOD','MEDS','PARTS'];
+const GOODS_BASE = { ORE:45, TECH:220, FOOD:8, MEDS:90, PARTS:130 };
+
+const stCache   = new Map();
+const discovered= new Set();
+let   mmZoom    = 1;
+let   mapPanX   = 0;
+let   mapPanY   = 0;
+
+function freshHome() {
+  return {
+    x:0, y:-500, name:'HOME-STATION', radius:160, rotation:0, rotSpeed:.1,
+    isHome:true, discovered:true, key:'home',
+    platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
+    inv:{ FUEL:{qty:999,price:12}, ORE:{qty:80,price:40}, TECH:{qty:30,price:200}, FOOD:{qty:200,price:8}, MEDS:{qty:60,price:85}, PARTS:{qty:50,price:120} },
+    regenTimer:{},
+  };
+}
+let homeStation = freshHome();
+
+function getStation(cx, cy) {
+  const key = cx + ',' + cy;
+  if (!stCache.has(key)) {
+    const rng = makePRNG(SEED ^ (cx*73856093) ^ (cy*19349663));
+    if (rng() > .30) { stCache.set(key, null); return null; }
+    const nm = ST_NAMES[Math.floor(rng()*ST_NAMES.length)] + '-' + ST_NAMES[Math.floor(rng()*ST_NAMES.length)];
+    const inv = { FUEL:{ qty:Math.floor(rng()*120+40), price:Math.floor(rng()*20+12) } };
+    for (const g of GOODS) {
+      const v = rng()*.6 + .7;
+      inv[g] = { qty:Math.floor(rng()*120+10), price:Math.floor(GOODS_BASE[g]*v) };
+    }
+    const isBounty = rng() < .15;
+    if (isBounty) inv['ALIEN-TECH'] = { qty:0, price:1200 };
+    stCache.set(key, {
+      x:(cx + rng()*.7 + .15)*CFG.CHUNK,
+      y:(cy + rng()*.7 + .15)*CFG.CHUNK,
+      name:nm, radius:120+rng()*80, rotation:0, rotSpeed:(rng()-.5)*.4,
+      platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
+      inv, discovered:false, isBounty, key, regenTimer:{},
+    });
+  }
+  return stCache.get(key);
+}
+
+function visChunks(r) {
+  const pcx = Math.floor(ship.x/CFG.CHUNK), pcy = Math.floor(ship.y/CFG.CHUNK), out = [];
+  for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) out.push([pcx+dx, pcy+dy]);
+  return out;
+}
+
+function allNearby() {
+  const list = [homeStation];
+  for (const [ccx,ccy] of visChunks(3)) { const s = getStation(ccx,ccy); if (s) list.push(s); }
+  return list;
+}
+
+function regenStations(dt) {
+  for (const st of allNearby()) {
+    for (const [good, data] of Object.entries(st.inv)) {
+      const cap = (good === 'FUEL' && st.isHome) ? 999 : 160;
+      if (data.qty < cap) {
+        st.regenTimer[good] = (st.regenTimer[good]||0) + dt;
+        if (st.regenTimer[good] > 10) { data.qty++; st.regenTimer[good] = 0; }
+      }
+    }
+    st.rotation += st.rotSpeed * dt;
+  }
+}
+
+// ── Docking ──
+
+let dockedSt = null;
+let distressSent = false, fuelEmptyTimer = 0;
+
+const dockingInfo = { st:null, padD:Infinity, padWorldX:0, padWorldY:0, shipSpd:0 };
+
+function getPadPositions(st) {
+  const isOrbiting = !st.isHome && !st.isBounty;
+  const orbitDist  = isOrbiting ? st.radius * 9 : 0;
+  const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;
+  const stCx    = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
+  const stCy    = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
+  const padDist = st.radius * 0.55;
+  return (st.platforms || []).map(p => {
+    const a = stRot + p.localAngle;
+    return { wx: stCx + Math.cos(a)*padDist, wy: stCy + Math.sin(a)*padDist };
+  });
+}
+
+function updateDockingInfo() {
+  dockingInfo.st = null;
+  dockingInfo.padD = Infinity;
+  dockingInfo.shipSpd = Math.hypot(ship.vx, ship.vy);
+  for (const st of allNearby()) {
+    if (!st) continue;
+    if (Math.hypot(ship.x-st.x, ship.y-st.y) > st.radius*15) continue;
+    for (const pad of getPadPositions(st)) {
+      const d = Math.hypot(ship.x - pad.wx, ship.y - pad.wy);
+      if (d < dockingInfo.padD) {
+        dockingInfo.padD = d;
+        dockingInfo.padWorldX = pad.wx;
+        dockingInfo.padWorldY = pad.wy;
+        dockingInfo.st = st;
+      }
+    }
+  }
+}
+
+function tryDock() {
+  if (modalOpen()) return;
+  const { st, padD, shipSpd } = dockingInfo;
+  if (!st || padD > CFG.DOCK_PAD_R) { addLog('Not aligned with any docking pad'); return; }
+  if (shipSpd > CFG.DOCK_MAX_SPD)   { addLog('Speed too high! Slow down to dock.'); return; }
+
+  st.discovered = true;
+  if (st.key) discovered.add(st.key);
+  dockedSt = st;
+
+  document.getElementById('trade-title').textContent = 'DOCKED · ' + st.name.toUpperCase();
+  buildRows(st);
+  updateFuelLabel(st); updateRepairLabel(st); updateShieldLabel();
+  checkContractDelivery(st);
+  buildContractPanel(st);
+
+  document.getElementById('bounty-area').style.display = st.isBounty ? 'block' : 'none';
+  if (st.isBounty) {
+    const bt = document.getElementById('bounty-text');
+    const bb = document.getElementById('btn-bounty');
+    if (bountyAccepted) {
+      bt.innerHTML = 'Active hunt: <span style="color:#000">ALIEN PRESENCE</span><br>Reward: ' + bountyReward + ' CR';
+      bb.style.display = 'none';
+    } else {
+      bt.innerHTML = 'Hunt the alien terrorising this sector.<br>Cost: <span style="color:#000">2,000 CR</span> · Reward: <span style="color:#000">15,000 CR</span>';
+      bb.style.display = 'inline-block';
+    }
+  }
+
+  addLog('Docked at ' + st.name);
+  if (cargoTotal() === 0 && Object.keys(ship.cargo).length === 0) {
+    addLog('TIP: Buy cargo here, then accept contracts to other stations');
+  }
+  document.getElementById('trade-modal').classList.add('open');
+}
+
+function checkFuel(dt) {
+  if (ship.fuel > 0) { distressSent = false; fuelEmptyTimer = 0; return; }
+  fuelEmptyTimer += dt;
+  if (fuelEmptyTimer > 3 && !distressSent) {
+    document.getElementById('distress-modal').classList.add('open');
+    distressSent = true;
+  }
+}
+
+function drawStation(st) {
+  if (!st) return;
+  const sx = wx(st.x), sy = wy(st.y), r = st.radius;
+  if (sx<-1200||sx>canvas.width+1200||sy<-1200||sy>canvas.height+1200) return;
+
+  const isOrbiting = !st.isHome && !st.isBounty;
+  const orbitDist  = isOrbiting ? r*9 : 0;
+
+  if (isOrbiting) {
+    ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.warn, .07); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, r*2.2, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.warn, .4); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = '9px Orbitron'; ctx.fillStyle = wa(PAL.ink, .5); ctx.textAlign = 'center';
+    ctx.fillText('★ ' + st.name.split('-')[0], sx, sy + r*2.2 + 13);
+    ctx.beginPath(); ctx.arc(sx, sy, orbitDist, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.ink, .05); ctx.lineWidth = 1;
+    ctx.setLineDash([3,8]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  const stRot = isOrbiting ? st.rotation*3 : st.rotation*2;
+  const stCx  = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
+  const stCy  = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
+  const scx = wx(stCx), scy = wy(stCy);
+
+  if (isOrbiting) {
+    ctx.beginPath(); ctx.arc(scx, scy, r*0.55, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.ink, .05); ctx.fill();
+    ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.strokeStyle = wa(PAL.ink, .12); ctx.lineWidth = .8;
+  ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+
+  for (let i = 0; i < 4; i++) {
+    const a = (i/4)*Math.PI*2;
+    const c = Math.cos(a), s = Math.sin(a);
+    ctx.beginPath(); ctx.moveTo(c*r*.22, s*r*.22); ctx.lineTo(c*r*.78, s*r*.78);
+    ctx.strokeStyle = wa(PAL.ink, .65); ctx.lineWidth = 1.4; ctx.stroke();
+    const tx = Math.cos(a+Math.PI/2)*5, ty = Math.sin(a+Math.PI/2)*5;
+    const px = c*r*.78, py = s*r*.78;
+    ctx.beginPath(); ctx.moveTo(px+tx,py+ty); ctx.lineTo(px,py); ctx.lineTo(px-tx,py-ty);
+    ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(c*r*.4+tx*.4,s*r*.4+ty*.4); ctx.lineTo(c*r*.4-tx*.4,s*r*.4-ty*.4);
+    ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = .7; ctx.stroke();
+  }
+
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i/6)*Math.PI*2 - Math.PI/6;
+    const p = r*.22;
+    if (i===0) ctx.moveTo(Math.cos(a)*p, Math.sin(a)*p);
+    else        ctx.lineTo(Math.cos(a)*p, Math.sin(a)*p);
+  }
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, r*.07, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
+
+  if (st.platforms) {
+    for (const p of st.platforms) {
+      ctx.save(); ctx.rotate(p.localAngle); ctx.translate(r*0.55, 0);
+      ctx.beginPath(); ctx.arc(0, 0, r*0.22, 0, Math.PI*2);
+      ctx.fillStyle = wa(PAL.safe, .06); ctx.fill();
+      ctx.strokeStyle = wa(PAL.safe, .7); ctx.lineWidth = 1.5;
+      ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+      const hw = r*0.09, hh = r*0.12;
+      ctx.beginPath();
+      ctx.moveTo(-hw, -hh); ctx.lineTo(-hw,  hh);
+      ctx.moveTo( hw, -hh); ctx.lineTo( hw,  hh);
+      ctx.moveTo(-hw,    0); ctx.lineTo( hw,  0);
+      ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 2; ctx.stroke();
+      ctx.font = `700 ${Math.max(7, r*0.08)}px Orbitron`;
+      ctx.fillStyle = wa(PAL.safe, .75); ctx.textAlign = 'center';
+      ctx.fillText('PAD', 0, -(r*0.22 + 4));
+      ctx.restore();
+    }
+  }
+
+  ctx.restore();
+
+  const lbl = (st.isBounty?'★ ':'') + (st.isHome ? 'HOME STATION' : st.name);
+  ctx.font = '500 10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
+  ctx.fillText(lbl, scx, scy - r - 14);
+
+  if (activeContract && activeContract.to === st.name) {
+    const pulse = .5 + .5*Math.sin(Date.now()*.005);
+    ctx.beginPath(); ctx.arc(scx, scy, r+20, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.accent, pulse*.6); ctx.lineWidth = 1;
+    ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, .9); ctx.textAlign = 'center';
+    ctx.fillText('▼ DESTINATION', scx, scy - r - 26);
+  }
+
+  if (dockingInfo.st === st) {
+    ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
+    if (dockingInfo.padD < CFG.DOCK_PAD_R) {
+      if (dockingInfo.shipSpd > CFG.DOCK_MAX_SPD) {
+        ctx.fillStyle = PAL.warn; ctx.fillText('SPEED TOO HIGH — BRAKE [S]', scx, scy + r + 18);
+      } else {
+        ctx.fillStyle = PAL.safe; ctx.fillText('◆ DOCKING PAD ALIGNED · [E] DOCK', scx, scy + r + 18);
+      }
+    } else if (dockingInfo.padD < r*2.5) {
+      ctx.fillStyle = wa(PAL.ink3, .8); ctx.fillText('ALIGN WITH PAD', scx, scy + r + 17);
+    }
+  }
+}
+
+let _safeCache = { cx:NaN, cy:NaN, result:false };
+function inSafe(x, y) {
+  const cx = Math.round(x/100), cy = Math.round(y/100);
+  if (_safeCache.cx === cx && _safeCache.cy === cy) return _safeCache.result;
+  let result = false;
+  for (const st of allNearby()) {
+    if (Math.hypot(x-st.x, y-st.y) < CFG.SAFE_ZONE) { result = true; break; }
+  }
+  _safeCache = { cx, cy, result };
+  return result;
+}
+
+
+// ── ## CONTRACTS ─────────────────────────────────────────────────────────────
+
+let contracts      = [];
+let activeContract = null;
+let contractsDone  = 0;
+
+function genContracts(fromSt) {
+  contracts = [];
+  let dests = allNearby().filter(s => s && s !== fromSt && s.name !== fromSt.name);
+  if (dests.length === 0 && !fromSt.isHome) dests = [homeStation];
+  if (dests.length === 0) return;
+  const cnt = Math.min(4, 2 + Math.floor(Math.random()*3));
+  for (let i = 0; i < cnt; i++) {
+    const dest = dests[Math.floor(Math.random()*dests.length)];
+    const good = GOODS[Math.floor(Math.random()*GOODS.length)];
+    const qty  = 5 + Math.floor(Math.random()*20);
+    const dist = Math.hypot(fromSt.x-dest.x, fromSt.y-dest.y);
+    const reward = Math.floor(dist*.04 + qty*30 + Math.random()*1000);
+    contracts.push({ from:fromSt.name, to:dest.name, toRef:dest, good, qty, reward, dist:Math.floor(dist) });
+  }
+}
+
+function acceptContract(c) {
+  if (!c || !c.good) { showMsg('ERROR: Invalid contract'); return; }
+  const qty = ship.cargo[c.good] || 0;
+  if (qty < c.qty) {
+    showMsg('NEED ' + c.qty + '× ' + c.good + ' (Have: ' + qty + ')');
+    addLog('Contract requires ' + c.qty + '× ' + c.good + ' but you have ' + qty);
+    return;
+  }
+  activeContract = c;
+  ship.cargo[c.good] -= c.qty;
+  if (!ship.cargo[c.good]) delete ship.cargo[c.good];
+  updateContractHUD();
+  addLog('✓ CONTRACT ACCEPTED: Deliver ' + c.qty + '× ' + c.good + ' to ' + c.to);
+  addLog('  Reward: ' + c.reward.toLocaleString() + ' CR on delivery');
+  showEventBanner('CONTRACT ACCEPTED', 'Deliver ' + c.qty + '× ' + c.good + ' to ' + c.to);
+  if (dockedSt) {
+    document.getElementById('trade-modal').classList.remove('open');
+    dockedSt = null;
+  }
+  updateHUD();
+}
+
+function checkContractDelivery(st) {
+  if (!activeContract) return;
+  if (st.name === activeContract.to) {
+    ship.credits += activeContract.reward;
+    contractsDone++;
+    addLog('CONTRACT COMPLETE · +' + activeContract.reward.toLocaleString() + ' CR');
+    showEventBanner('CONTRACT COMPLETE', '+' + activeContract.reward.toLocaleString() + ' CR DELIVERED');
+    activeContract = null;
+    updateContractHUD();
+    updateHUD();
+  }
+}
+
+function updateContractHUD() {
+  const el = document.getElementById('contract-hud');
+  if (!activeContract) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const dest = activeContract.toRef;
+  const dist = dest ? Math.floor(Math.hypot(ship.x-dest.x, ship.y-dest.y)) : activeContract.dist;
+  document.getElementById('ch-route').textContent = activeContract.from + ' → ' + activeContract.to;
+  document.getElementById('ch-info').textContent  = activeContract.qty + '× ' + activeContract.good + ' · ' + fmtDist(dist) + ' · +' + activeContract.reward.toLocaleString() + ' CR';
+}
+
+function buildContractPanel(st) {
+  genContracts(st);
+  const el = document.getElementById('contract-list');
+  el.innerHTML = '';
+
+  if (activeContract) {
+    const d = document.createElement('div');
+    d.className = 'cjob active';
+    d.innerHTML = `<div class="cname" style="color:var(--accent)">★ ACTIVE DELIVERY</div>
+      <div class="cinfo">Deliver ${activeContract.qty}× ${activeContract.good} to <span style="color:#000">${activeContract.to}</span></div>
+      <div class="crew" style="color:var(--accent)">+${activeContract.reward.toLocaleString()} CR</div>`;
+    el.appendChild(d);
+  }
+
+  if (contracts.length === 0 && !activeContract) {
+    el.innerHTML = '<div class="dim" style="padding:6px 0;font-size:10px">No contracts available here</div>';
+  } else {
+    contracts.forEach(c => {
+      const myQty  = ship.cargo[c.good] || 0;
+      const canDo  = myQty >= c.qty;
+      const div    = document.createElement('div');
+      div.className = 'cjob' + (canDo ? '' : ' dim');
+      div.innerHTML = `<div class="cname">${c.from} → <span style="color:#000">${c.to}</span></div>
+        <div class="cinfo">Deliver ${c.qty}× ${c.good} &nbsp;·&nbsp; ${fmtDist(c.dist)} &nbsp;·&nbsp; Have: ${myQty}</div>
+        <span class="crew">+${c.reward.toLocaleString()} CR</span>`;
+      div.style.cursor = 'pointer';
+      div.onclick = () => acceptContract(c);
+      el.appendChild(div);
+    });
+  }
+
+  const cancelBtn = document.getElementById('btn-cancel-contract');
+  cancelBtn.style.display = activeContract ? 'block' : 'none';
+}
+
+function drawContractNav() {
+  if (!activeContract || !activeContract.toRef) return;
+  const dest = activeContract.toRef;
+  const sx = wx(dest.x), sy = wy(dest.y);
+  const ccx = canvas.width/2, ccy = canvas.height/2;
+  if (sx > -50 && sx < canvas.width+50 && sy > -50 && sy < canvas.height+50) return;
+
+  const ang    = Math.atan2(sy-ccy, sx-ccx);
+  const margin = 100;
+  const ix = Math.cos(ang)*Math.min(canvas.width/2-margin, canvas.height/2-margin) + ccx;
+  const iy = Math.sin(ang)*Math.min(canvas.width/2-margin, canvas.height/2-margin) + ccy;
+  const pulse = .6 + .4*Math.abs(Math.sin(Date.now()*.008));
+
+  ctx.save(); ctx.translate(ix, iy); ctx.rotate(ang + Math.PI/2);
+  ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(16,12); ctx.lineTo(-16,12); ctx.closePath();
+  ctx.fillStyle = wa(PAL.accent, pulse); ctx.fill();
+  ctx.fillStyle = '#f5f3ee'; ctx.font = 'bold 13px Share Tech Mono'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('◆', 0, 0);
+  ctx.restore();
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, pulse); ctx.textAlign = 'center';
+  ctx.fillText('CONTRACT', ix, iy+30);
+  ctx.font = '8px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, pulse*.7); ctx.textAlign = 'center';
+  ctx.fillText('▼ ' + activeContract.to, ix, iy+42);
+}
+
+function drawRouteLine() {
+  if (!activeContract || !activeContract.toRef) return;
+  const dest = activeContract.toRef;
+  const sx = wx(ship.x), sy = wy(ship.y), dx = wx(dest.x), dy = wy(dest.y);
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(dx, dy);
+  ctx.strokeStyle = wa(PAL.accent, .1); ctx.lineWidth = .8; ctx.setLineDash([6,10]); ctx.stroke(); ctx.setLineDash([]);
+  const dist = Math.floor(Math.hypot(ship.x-dest.x, ship.y-dest.y));
+  ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, .7); ctx.textAlign = 'center';
+  ctx.fillText(fmtDist(dist), (sx+dx)/2, (sy+dy)/2 - 6);
+}
+
+
+// ── ## TRADING ───────────────────────────────────────────────────────────────
+
+function buildRows(st) {
+  const c = document.getElementById('trade-rows'); c.innerHTML = '';
+  for (const [good, data] of Object.entries(st.inv)) {
+    if (good === 'FUEL') continue;
+    const myQ  = ship.cargo[good] || 0;
+    const sellP = Math.floor(data.price * CFG.SELL_RATIO);
+    const row   = document.createElement('div'); row.className = 'trow';
+    row.innerHTML = `<span>${good}</span><span>${data.qty}</span><span>${data.price}</span><span>${sellP}</span><span>${myQ}</span>` +
+      `<div class="tactions"><button class="tbtn" onclick="doBuy('${good}')">BUY</button><button class="tbtn sell" onclick="doSell('${good}')">SELL</button></div>`;
+    c.appendChild(row);
+  }
+}
+
+window.doBuy = function(g) {
+  const st = dockedSt; if (!st) return;
+  const d = st.inv[g];
+  if (d.qty <= 0)                    { showMsg('OUT OF STOCK');           return; }
+  if (ship.credits < d.price)        { showMsg('INSUFFICIENT CREDITS');   return; }
+  if (cargoTotal() >= ship.cargoMax) { showMsg('HOLD FULL');              return; }
+  ship.credits -= d.price; d.qty--;
+  ship.cargo[g] = (ship.cargo[g]||0) + 1;
+  buildRows(st); updateHUD();
+};
+
+window.doSell = function(g) {
+  const st = dockedSt; if (!st) return;
+  const myQ = ship.cargo[g] || 0;
+  if (myQ <= 0)           { showMsg('NOTHING TO SELL'); return; }
+  const p = Math.floor(st.inv[g].price * CFG.SELL_RATIO);
+  ship.credits += p; st.inv[g].qty++;
+  ship.cargo[g]--; if (!ship.cargo[g]) delete ship.cargo[g];
+  buildRows(st); updateHUD();
+};
+
+function updateFuelLabel(st) {
+  const needed = CFG.FUEL_MAX - ship.fuel;
+  const cost   = Math.ceil(needed * st.inv.FUEL.price);
+  document.getElementById('fuel-cost-label').textContent = needed < .5 ? 'FULL' : '~' + cost + ' CR (' + Math.floor(needed) + ' u)';
+}
+function updateRepairLabel(st) {
+  const dmg  = 100 - ship.hull;
+  const cost = Math.ceil(dmg * (st.isHome ? 3 : 4));
+  document.getElementById('repair-cost-label').textContent = dmg < .5 ? 'INTACT' : '~' + cost + ' CR (' + Math.floor(dmg) + '% dmg)';
+}
+function updateShieldLabel() {
+  document.getElementById('shield-cost-label').textContent = ship.hasShield ? 'INSTALLED · [Q]' : CFG.SHIELD_COST + ' CR';
+  document.getElementById('btn-shield').style.display = ship.hasShield ? 'none' : 'inline-block';
+}
+
+document.getElementById('btn-refuel').addEventListener('click', () => {
+  const st = dockedSt; if (!st) return;
+  const needed = CFG.FUEL_MAX - ship.fuel;
+  if (needed < .5)             { showMsg('ALREADY FULL');          return; }
+  const cost = Math.ceil(needed * st.inv.FUEL.price);
+  if (ship.credits < cost)     { showMsg('INSUFFICIENT CREDITS');  return; }
+  ship.credits -= cost; ship.fuel = CFG.FUEL_MAX; distressSent = false;
+  updateFuelLabel(st); addLog('Refuelled · ' + cost + ' CR'); updateHUD();
+});
+
+document.getElementById('btn-repair').addEventListener('click', () => {
+  const st = dockedSt; if (!st) return;
+  const dmg = 100 - ship.hull;
+  if (dmg < .5)            { showMsg('HULL INTACT');          return; }
+  const cost = Math.ceil(dmg * (st.isHome ? 3 : 4));
+  if (ship.credits < cost) { showMsg('INSUFFICIENT CREDITS'); return; }
+  ship.credits -= cost; ship.hull = 100;
+  updateRepairLabel(st); addLog('Repaired · ' + cost + ' CR'); updateHUD();
+});
+
+document.getElementById('btn-shield').addEventListener('click', () => {
+  if (ship.hasShield)                  { showMsg('ALREADY INSTALLED');     return; }
+  if (ship.credits < CFG.SHIELD_COST)  { showMsg('INSUFFICIENT CREDITS'); return; }
+  ship.credits -= CFG.SHIELD_COST; ship.hasShield = true;
+  addLog('Shield installed · [Q]'); updateShieldLabel(); updateHUD();
+});
+
+document.getElementById('btn-bounty').addEventListener('click', () => {
+  if (bountyAccepted || activeBoss)      { showMsg('BOUNTY ALREADY ACTIVE');  return; }
+  if (ship.credits < CFG.BOUNTY_COST)    { showMsg('INSUFFICIENT CREDITS');  return; }
+  ship.credits -= CFG.BOUNTY_COST; bountyAccepted = true; bountyReward = CFG.BOUNTY_REWARD;
+  spawnBoss(); addLog('Bounty accepted · Boss incoming'); updateHUD();
+  document.getElementById('trade-modal').classList.remove('open'); dockedSt = null;
+});
+
+document.getElementById('btn-cancel-contract').addEventListener('click', () => {
+  if (!activeContract) return;
+  ship.cargo[activeContract.good] = (ship.cargo[activeContract.good]||0) + activeContract.qty;
+  activeContract = null;
+  updateContractHUD(); buildContractPanel(dockedSt); addLog('Contract cancelled · cargo returned'); updateHUD();
+});
+
+document.getElementById('trade-close').addEventListener('click', () => {
+  document.getElementById('trade-modal').classList.remove('open');
+  dockedSt = null; addLog('Undocked');
+});
+
+document.getElementById('btn-distress').addEventListener('click', () => {
+  document.getElementById('distress-modal').classList.remove('open');
+  const near = allNearby().filter(s => s && s.discovered);
+  if (!near.length) return;
+  const st = near.reduce((a,b) => Math.hypot(ship.x-a.x,ship.y-a.y) < Math.hypot(ship.x-b.x,ship.y-b.y) ? a : b);
+  ship.x = st.x + (Math.random()-.5)*600; ship.y = st.y + (Math.random()-.5)*600;
+  ship.fuel = 25; ship.vx = 0; ship.vy = 0; ship.invincible = 4;
+  addLog('Rescue ship · fuel restored');
+  setTimeout(() => spawnEnemy(), 3000); addLog('Warning: rescue signal attracted pirates');
+});
+document.getElementById('btn-drift').addEventListener('click', () => {
+  document.getElementById('distress-modal').classList.remove('open');
+});
+
+
+// ── ## CARGO & DROPS ─────────────────────────────────────────────────────────
+
+const drops = [];
+const DROP_CAP = 150;
+
+function collectDrop(d) {
+  d.ttl = -1;
+  const space = ship.cargoMax - cargoTotal();
+  const take  = Math.min(d.qty, space);
+  if (take <= 0) { addLog('Hold full!'); return; }
+  ship.cargo[d.good] = (ship.cargo[d.good]||0) + take;
+  addLog('Collected ' + take + '× ' + d.good);
+}
+
+function drawDrops() {
+  const pulse = .5 + .5*Math.sin(Date.now()*.004);
+  for (const d of drops) {
+    if (d.ttl < 0) continue;
+    const sx = wx(d.x), sy = wy(d.y);
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.ink, .35+.35*pulse); ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = '8px Share Tech Mono'; ctx.textAlign = 'center'; ctx.fillStyle = wa(PAL.ink, .6);
+    ctx.fillText(d.qty + '×' + d.good, sx, sy-10);
+    if (Math.hypot(ship.x-d.x, ship.y-d.y) < 55) collectDrop(d);
+  }
+}
+
+
+// ── ## ENEMIES ───────────────────────────────────────────────────────────────
+
+const enemies   = [];
+let   spawnTimer = 0;
+
+function spawnEnemy() {
+  if (inSafe(ship.x, ship.y)) return;
+  let tries = 0, a, d, sx, sy;
+  do {
+    a = Math.random()*Math.PI*2; d = 900 + Math.random()*700;
+    sx = ship.x + Math.cos(a)*d; sy = ship.y + Math.sin(a)*d; tries++;
+  } while (inSafe(sx, sy) && tries < 8);
+  if (inSafe(sx, sy)) return;
+  enemies.push({ x:sx, y:sy, vx:0, vy:0, angle:0, hull:70, maxSpeed:240, thrust:180, rotSpeed:1.6, dead:false, laserTimer:0, laserCooldown:3.5+Math.random()*2.5, laserBeam:null, fleeing:false });
+}
+
+function killEnemy(e) {
+  e.dead = true; ship.kills++;
+  addLog('Pirate destroyed');
+  drops.push({ x:e.x, y:e.y, good:GOODS[Math.floor(Math.random()*GOODS.length)], qty:Math.floor(Math.random()*8+3), ttl:2500, isSignal:false });
+}
+
+function updateEnemies(dt) {
+  spawnTimer += dt;
+  if (spawnTimer > CFG.ENEMY_SPAWN_INTERVAL) {
+    spawnTimer = 0;
+    if (enemies.filter(e=>!e.dead).length < CFG.ENEMY_CAP) spawnEnemy();
+  }
+  for (const e of enemies) {
+    if (e.dead) continue;
+    if (Math.hypot(e.x-ship.x, e.y-ship.y) > 6000) { e.dead = true; continue; }
+
+    const pSafe = inSafe(ship.x, ship.y), pirateSafe = inSafe(e.x, e.y);
+    if (pirateSafe || (pSafe && !e.fleeing)) e.fleeing = true;
+
+    let tgt;
+    if (e.fleeing) {
+      let near = null, nearD = Infinity;
+      for (const st of allNearby()) { const d2 = Math.hypot(e.x-st.x,e.y-st.y); if (d2 < nearD) { nearD=d2; near=st; } }
+      if (near) { const fdx=e.x-near.x, fdy=e.y-near.y; tgt = Math.atan2(fdx,-fdy); }
+      if (!pirateSafe && !pSafe && nearD > CFG.SAFE_ZONE*1.5) e.fleeing = false;
+    } else {
+      tgt = Math.atan2(ship.x-e.x, -(ship.y-e.y));
+    }
+
+    if (tgt !== undefined) {
+      const da = angleDiff(tgt, e.angle);
+      e.angle += Math.sign(da) * Math.min(Math.abs(da), e.rotSpeed*dt);
+    }
+
+    const dist = Math.hypot(ship.x-e.x, ship.y-e.y);
+    if (e.fleeing || dist > 220) {
+      e.vx += Math.sin(e.angle)*e.thrust*dt;
+      e.vy -= Math.cos(e.angle)*e.thrust*dt;
+    }
+    const spd = Math.hypot(e.vx,e.vy);
+    if (spd > e.maxSpeed) { e.vx=(e.vx/spd)*e.maxSpeed; e.vy=(e.vy/spd)*e.maxSpeed; }
+    e.vx *= Math.pow(.975,dt*60); e.vy *= Math.pow(.975,dt*60);
+    e.x += e.vx*dt; e.y += e.vy*dt;
+
+    e.laserTimer += dt;
+    if (!e.fleeing && !pSafe && e.laserTimer > e.laserCooldown && dist < 520) {
+      e.laserTimer = 0;
+      const inac  = (0.25 + dist/800) * ((Math.random()-.5)*2);
+      const fa    = e.angle + inac;
+      const nose  = 18, len2 = 540;
+      e.laserBeam = { x1:e.x+Math.sin(fa)*nose, y1:e.y-Math.cos(fa)*nose, x2:e.x+Math.sin(fa)*(nose+len2), y2:e.y-Math.cos(fa)*(nose+len2), ttl:.12 };
+      if (!ship.shieldActive && ship.invincible <= 0 && lineCircle(e.laserBeam.x1,e.laserBeam.y1,e.laserBeam.x2,e.laserBeam.y2,ship.x,ship.y,16)) {
+        ship.hull = Math.max(0, ship.hull-10); addLog('Hull hit! ' + Math.floor(ship.hull) + '%'); if (ship.hull <= 0) killShip();
+      }
+    }
+    if (e.laserBeam) { e.laserBeam.ttl -= dt; if (e.laserBeam.ttl <= 0) e.laserBeam = null; }
+
+    if (!pSafe && dist < 24 && ship.invincible <= 0) {
+      ship.hull = Math.max(0, ship.hull-10); e.hull -= 50;
+      if (e.hull <= 0) killEnemy(e); if (ship.hull <= 0) killShip();
+    }
+  }
+  for (let i = enemies.length-1; i >= 0; i--) if (enemies[i].dead && !enemies[i].laserBeam) enemies.splice(i,1);
+}
+
+function drawEnemies() {
+  for (const e of enemies) {
+    if (e.dead) continue;
+    drawShipAt(e, wx(e.x), wy(e.y), wa(PAL.ink, .5), false);
+    if (e.laserBeam) {
+      ctx.beginPath(); ctx.moveTo(wx(e.laserBeam.x1),wy(e.laserBeam.y1)); ctx.lineTo(wx(e.laserBeam.x2),wy(e.laserBeam.y2));
+      ctx.strokeStyle = wa(PAL.ink,.5); ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    const ex = wx(e.x), ey = wy(e.y);
+    ctx.fillStyle = wa(PAL.ink,.06); ctx.fillRect(ex-18, ey-30, 36, 4);
+    ctx.fillStyle = wa(PAL.ink,.55); ctx.fillRect(ex-18, ey-30, (e.hull/70)*36, 4);
+  }
+}
+
+
+// ── ## LASER ─────────────────────────────────────────────────────────────────
+
+function fireLaser() {
+  if (ship.laserCooldown > 0 || ship.heat >= 100 || ship.energy < CFG.LASER_ENERGY || modalOpen()) return;
+  ship.laserCooldown = CFG.LASER_CD;
+  ship.heat   = Math.min(100, ship.heat   + CFG.LASER_HEAT);
+  ship.energy = Math.max(0,   ship.energy - CFG.LASER_ENERGY);
+
+  const nose = 20;
+  const bx1 = ship.x + Math.sin(ship.angle)*nose;
+  const by1 = ship.y - Math.cos(ship.angle)*nose;
+  const bx2 = ship.x + Math.sin(ship.angle)*(nose + CFG.LASER_LEN);
+  const by2 = ship.y - Math.cos(ship.angle)*(nose + CFG.LASER_LEN);
+  ship.laserBeam = { x1:bx1, y1:by1, x2:bx2, y2:by2, ttl:.15 };
+
+  for (const e of enemies)  { if (e.dead) continue; if (lineCircle(bx1,by1,bx2,by2,e.x,e.y,16)) { e.hull -= 35; if (e.hull<=0) killEnemy(e); } }
+  for (const m of meteors)  { if (m.dead) continue; if (lineCircle(bx1,by1,bx2,by2,m.x,m.y,m.r)) splitMeteor(m); }
+  if (activeBoss && !activeBoss.dead) {
+    if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,14)) hitBoss(20);
+    else if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,activeBoss.radius)) hitBoss(10);
+  }
+  for (const s of stranded) {
+    if (s.helped || s.looted) continue;
+    if (lineCircle(bx1,by1,bx2,by2,s.x,s.y,16)) {
+      s.looted = true; changeKarma(-10, 'Attacked stranded');
+      for (let i = 0; i < 3; i++) drops.push({ x:s.x+(Math.random()-.5)*60, y:s.y+(Math.random()-.5)*60, good:GOODS[Math.floor(Math.random()*GOODS.length)], qty:Math.floor(Math.random()*4+2), ttl:2500, isSignal:false });
+    }
+  }
+}
+
+function drawLaser() {
+  if (!ship.laserBeam) return;
+  const age   = 1 - (ship.laserBeam.ttl / .15);
+  const alpha = 1 - age*.7;
+  const x1 = wx(ship.laserBeam.x1), y1 = wy(ship.laserBeam.y1);
+  const x2 = wx(ship.laserBeam.x2), y2 = wy(ship.laserBeam.y2);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.08); ctx.lineWidth = 14; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.35); ctx.lineWidth = 4;  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = 1.2; ctx.stroke();
+}
+
+
+// ── ## METEORS ───────────────────────────────────────────────────────────────
+
+const meteors = []; let meteorTimer = 0;
+
+function spawnMeteor() {
+  const angle = Math.random()*Math.PI*2, dist = 800 + Math.random()*600;
+  const r = 18 + Math.random()*28, speed = 40 + Math.random()*80, ma = Math.random()*Math.PI*2;
+  const sides = 6 + Math.floor(Math.random()*5);
+  const pts = Array.from({length:sides}, (_,i) => {
+    const a = (i/sides)*Math.PI*2; return { x:Math.cos(a)*r*(.6+Math.random()*.5), y:Math.sin(a)*r*(.6+Math.random()*.5) };
+  });
+  meteors.push({ x:ship.x+Math.cos(angle)*dist, y:ship.y+Math.sin(angle)*dist, vx:Math.cos(ma)*speed, vy:Math.sin(ma)*speed, r, pts, rotation:0, rotSpeed:(Math.random()-.5)*1.2, dead:false, generation:0 });
+}
+
+function splitMeteor(m) {
+  m.dead = true; if (m.generation >= 2) return;
+  const count = 2 + Math.floor(Math.random()*2);
+  for (let i = 0; i < count; i++) {
+    const nr = m.r*.5; if (nr < 8) return;
+    const a = Math.random()*Math.PI*2, spd = 60 + Math.random()*60;
+    const sides = 5 + Math.floor(Math.random()*4);
+    const pts   = Array.from({length:sides}, (_,j) => { const ang=(j/sides)*Math.PI*2, rr=nr*(.55+Math.random()*.5); return {x:Math.cos(ang)*rr, y:Math.sin(ang)*rr}; });
+    meteors.push({ x:m.x+(Math.random()-.5)*60, y:m.y+(Math.random()-.5)*60, vx:m.vx*.5+Math.cos(a)*spd, vy:m.vy*.5+Math.sin(a)*spd, r:nr, pts, rotation:0, rotSpeed:(Math.random()-.5)*2, dead:false, generation:m.generation+1 });
+  }
+}
+
+function updateMeteors(dt) {
+  meteorTimer += dt;
+  if (meteorTimer > CFG.METEOR_SPAWN_INTERVAL_MIN + Math.random()*(CFG.METEOR_SPAWN_INTERVAL_MAX-CFG.METEOR_SPAWN_INTERVAL_MIN)) {
+    meteorTimer = 0;
+    if (meteors.filter(m=>!m.dead).length < CFG.METEOR_CAP) {
+      const spawnCount = CFG.METEOR_SPAWN_COUNT_MIN + Math.floor(Math.random()*(CFG.METEOR_SPAWN_COUNT_MAX - CFG.METEOR_SPAWN_COUNT_MIN + 1));
+      for (let i=0; i<spawnCount; i++) spawnMeteor();
+    }
+  }
+  for (const m of meteors) {
+    if (m.dead) continue;
+    if (Math.hypot(m.x-ship.x, m.y-ship.y) > 3000) { m.dead = true; continue; }
+    m.x += m.vx*dt; m.y += m.vy*dt; m.rotation += m.rotSpeed*dt;
+    if (ship.invincible <= 0 && !ship.shieldActive && Math.hypot(m.x-ship.x, m.y-ship.y) < m.r+14) {
+      const dmg = 10 + Math.floor(m.r*.8); ship.hull = Math.max(0, ship.hull-dmg); addLog('Meteor impact! -' + dmg + ' hull');
+      const dx=ship.x-m.x, dy=ship.y-m.y, d=Math.hypot(dx,dy)||1;
+      ship.vx+=(dx/d)*120; ship.vy+=(dy/d)*120; ship.invincible=1.2;
+      splitMeteor(m); if (ship.hull <= 0) killShip();
+    }
+  }
+  for (let i = meteors.length-1; i >= 0; i--) if (meteors[i].dead) meteors.splice(i,1);
+}
+
+function drawMeteors() {
+  for (const m of meteors) {
+    if (m.dead) continue;
+    const sx = wx(m.x), sy = wy(m.y);
+    if (sx<-100||sx>canvas.width+100||sy<-100||sy>canvas.height+100) continue;
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(m.rotation);
+    ctx.beginPath(); ctx.moveTo(m.pts[0].x, m.pts[0].y);
+    for (let i=1; i<m.pts.length; i++) ctx.lineTo(m.pts[i].x, m.pts[i].y);
+    ctx.closePath(); ctx.fillStyle = wa(PAL.ink,.03); ctx.fill(); ctx.strokeStyle = wa(PAL.ink,.45); ctx.lineWidth=1; ctx.stroke();
+    ctx.restore();
+  }
+}
+
+
+// ── ## BLACK HOLES ────────────────────────────────────────────────────────────
+
+const blackHoles = []; let bhTimer = 0;
+
+function spawnBH() {
+  const a = Math.random()*Math.PI*2, d = 3000 + Math.random()*3000;
+  blackHoles.push({ x:ship.x+Math.cos(a)*d, y:ship.y+Math.sin(a)*d, rotation:0, ttl:90+Math.random()*60 });
+  addLog('Singularity detected');
+}
+
+function updateBlackHoles(dt) {
+  bhTimer += dt; if (bhTimer > 50+Math.random()*40) { bhTimer=0; if (blackHoles.length < CFG.BH_CAP) spawnBH(); }
+  for (const bh of blackHoles) {
+    bh.ttl -= dt; bh.rotation += dt*.3;
+    const dx = bh.x-ship.x, dy = bh.y-ship.y, dist = Math.hypot(dx,dy);
+    if (dist < CFG.BH_PULL && dist > CFG.BH_ESC && ship.invincible <= 0) {
+      const pull = .4*(1-dist/CFG.BH_PULL);
+      ship.vx += (dx/dist)*pull*500*dt; ship.vy += (dy/dist)*pull*500*dt;
+    }
+    if (dist < CFG.BH_ESC && ship.invincible <= 0) {
+      ship.hull = Math.max(0, ship.hull-30); ship.invincible = 2;
+      const ta = Math.random()*Math.PI*2;
+      ship.x = Math.cos(ta)*2000; ship.y = Math.sin(ta)*2000;
+      ship.vx=0; ship.vy=0; ship.hull=Math.max(15,ship.hull*.4); ship.fuel=Math.max(10,ship.fuel*.7); ship.invincible=4;
+      addLog('Singularity eject — ship critical!'); bh.ttl=0;
+    }
+  }
+  for (let i=blackHoles.length-1; i>=0; i--) if (blackHoles[i].ttl<=0) blackHoles.splice(i,1);
+}
+
+function drawBlackHoles() {
+  for (const bh of blackHoles) {
+    const sx=wx(bh.x), sy=wy(bh.y);
+    if (sx<-200||sx>canvas.width+200||sy<-200||sy>canvas.height+200) continue;
+    ctx.beginPath(); ctx.arc(sx,sy,CFG.BH_PULL,0,Math.PI*2);
+    ctx.strokeStyle=wa(PAL.ink,.05); ctx.lineWidth=1; ctx.setLineDash([3,12]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(sx,sy,CFG.BH_ESC,0,Math.PI*2);
+    ctx.strokeStyle=wa(PAL.ink,.25); ctx.lineWidth=1; ctx.setLineDash([2,5]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(bh.rotation);
+    for (let i=0; i<6; i++) {
+      const a=(i/6)*Math.PI*2;
+      ctx.beginPath();
+      for (let r=80; r<=180; r+=4) {
+        const off=(r-80)*.04, ang=a+off, px=Math.cos(ang)*r, py=Math.sin(ang)*r;
+        if (r===80) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.strokeStyle=wa(PAL.ink,.4); ctx.lineWidth=1.2; ctx.stroke();
+    }
+    ctx.restore();
+    ctx.beginPath(); ctx.arc(sx,sy,55,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,.3); ctx.textAlign='center';
+    ctx.fillText('SINGULARITY', sx, sy+CFG.BH_PULL+12);
+  }
+}
+
+
+// ── ## SWARMS ─────────────────────────────────────────────────────────────────
+
+const swarms = []; let swarmTimer = 0;
+
+function spawnSwarm() {
+  const fromAngle=Math.random()*Math.PI*2, dist=2800;
+  const sx=ship.x+Math.cos(fromAngle)*dist, sy2=ship.y+Math.sin(fromAngle)*dist;
+  const tx=ship.x+(Math.random()-.5)*400, ty=ship.y+(Math.random()-.5)*400;
+  const dx=tx-sx, dy=ty-sy2, dlen=Math.hypot(dx,dy);
+  const speed=380, vx=(dx/dlen)*speed, vy=(dy/dlen)*speed;
+  const count=8+Math.floor(Math.random()*7);
+  const rocks=Array.from({length:count}, ()=>{
+    const r=14+Math.random()*16, sides=5+Math.floor(Math.random()*4);
+    const pts=Array.from({length:sides},(_,j)=>{const a=(j/sides)*Math.PI*2, rr=r*(.6+Math.random()*.4); return{x:Math.cos(a)*rr,y:Math.sin(a)*rr};});
+    return {ox:(Math.random()-.5)*300, oy:(Math.random()-.5)*300, r, pts, rotation:Math.random()*Math.PI*2, rotSpeed:(Math.random()-.5)*2};
+  });
+  swarms.push({cx:sx,cy:sy2,vx,vy,rocks,warningTime:CFG.SWARM_WARN,state:'warning',targetX:tx,targetY:ty});
+  showEventBanner('⚠ ASTEROID SWARM INBOUND', CFG.SWARM_WARN+'s — activate shield [Q] or evade!');
+}
+
+function updateSwarms(dt) {
+  swarmTimer += dt; if (swarmTimer > 35+Math.random()*25) { swarmTimer=0; if (swarms.length < CFG.SWARM_CAP) spawnSwarm(); }
+  for (const s of swarms) {
+    if (s.state==='warning') { s.warningTime -= dt; if (s.warningTime<=0) s.state='active'; continue; }
+    if (s.state==='active') {
+      s.cx+=s.vx*dt; s.cy+=s.vy*dt;
+      for (const r of s.rocks) r.rotation+=r.rotSpeed*dt;
+      if (ship.invincible<=0 && !ship.shieldActive) {
+        for (const r of s.rocks) {
+          if (Math.hypot(s.cx+r.ox-ship.x, s.cy+r.oy-ship.y) < r.r+14) {
+            const dmg=40+Math.floor(r.r); ship.hull=Math.max(0,ship.hull-dmg); addLog('SWARM IMPACT! -'+dmg+' hull');
+            ship.invincible=.6; if (ship.hull<=0) { killShip(); return; }
+          }
+        }
+      }
+      if (Math.hypot(s.cx-s.targetX, s.cy-s.targetY) > 3500) s.state='gone';
+    }
+  }
+  for (let i=swarms.length-1; i>=0; i--) if (swarms[i].state==='gone') swarms.splice(i,1);
+}
+
+function drawSwarms() {
+  for (const s of swarms) {
+    if (s.state==='warning') {
+      const ccx=canvas.width/2, ccy=canvas.height/2;
+      const ang=Math.atan2(wy(s.cy)-ccy, wx(s.cx)-ccx), margin=80;
+      const ix=Math.cos(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccx;
+      const iy=Math.sin(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccy;
+      const pulse=.5+.5*Math.sin(Date.now()*.012);
+      ctx.save(); ctx.translate(ix,iy); ctx.rotate(ang+Math.PI/2);
+      ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(18,10); ctx.lineTo(-18,10); ctx.closePath();
+      ctx.fillStyle=wa(PAL.ink,pulse); ctx.fill();
+      ctx.fillStyle='#000'; ctx.font='bold 16px Share Tech Mono'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',0,0);
+      ctx.restore(); ctx.textBaseline='alphabetic';
+      ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,pulse); ctx.textAlign='center';
+      ctx.fillText('SWARM '+s.warningTime.toFixed(1)+'s', ix, iy+36);
+    } else if (s.state==='active') {
+      for (const r of s.rocks) {
+        const rx=wx(s.cx+r.ox), ry=wy(s.cy+r.oy);
+        if (rx<-100||rx>canvas.width+100||ry<-100||ry>canvas.height+100) continue;
+        ctx.save(); ctx.translate(rx,ry); ctx.rotate(r.rotation);
+        ctx.beginPath(); ctx.moveTo(r.pts[0].x,r.pts[0].y);
+        for (let i=1;i<r.pts.length;i++) ctx.lineTo(r.pts[i].x,r.pts[i].y);
+        ctx.closePath(); ctx.fillStyle=wa(PAL.ink,.04); ctx.fill(); ctx.strokeStyle=wa(PAL.ink,.65); ctx.lineWidth=1.1; ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+}
+
+
+// ── ## SHIELD ─────────────────────────────────────────────────────────────────
+
+function tickShield(dt) {
+  if (!ship.shieldActive) return;
+  ship.energy -= CFG.SHIELD_DRAIN * dt;
+  if (ship.energy <= 0) { ship.energy=0; ship.shieldActive=false; addLog('Shield drained'); }
+}
+
+function drawShield() {
+  if (!ship.shieldActive) return;
+  const sx=wx(ship.x), sy=wy(ship.y), t=Date.now()*.008;
+  ctx.beginPath(); ctx.arc(sx,sy,29,0,Math.PI*2);
+  ctx.strokeStyle=wa(PAL.ink,.65+.25*Math.sin(t)); ctx.lineWidth=1.5; ctx.stroke();
+  for (let i=0; i<6; i++) {
+    const a=t+(i/6)*Math.PI*2;
+    ctx.beginPath(); ctx.arc(sx,sy,29,a,a+.28);
+    ctx.strokeStyle=PAL.ink; ctx.lineWidth=2.2; ctx.stroke();
+  }
+}
+
+
+// ── ## STRANDED SHIPS ─────────────────────────────────────────────────────────
+
+const stranded = []; let strandedTimer = 0;
+const SNAMES = ['MERCHANT','HAULER','COURIER','PILGRIM','EXPLORER','TRADER'];
+let activeStranded = null;
+
+function strandedOpen() { return document.getElementById('stranded-modal').classList.contains('open'); }
+
+function spawnStranded() {
+  const a=Math.random()*Math.PI*2, d=1200+Math.random()*800;
+  stranded.push({ x:ship.x+Math.cos(a)*d, y:ship.y+Math.sin(a)*d, angle:Math.random()*Math.PI*2, vx:0, vy:0, name:SNAMES[Math.floor(Math.random()*SNAMES.length)]+'-'+Math.floor(Math.random()*999), helped:false, looted:false, escorting:false, ttl:CFG.STRANDED_TTL });
+}
+
+function openStranded(s) {
+  activeStranded = s;
+  document.getElementById('stranded-name').textContent = s.name;
+  const myParts = ship.cargo.PARTS||0;
+  const pb = document.getElementById('btn-help-parts');
+  pb.textContent = '[ DELIVER PARTS · 5× PARTS → +' + CFG.PARTS_REWARD + ' CR' + (myParts<5 ? ' (have:'+myParts+')':'') + ' ]';
+  pb.disabled = myParts < 5; pb.style.opacity = myParts<5 ? .5 : 1;
+  document.getElementById('stranded-modal').classList.add('open');
+}
+
+function updateStranded(dt) {
+  strandedTimer += dt;
+  if (strandedTimer > 50+Math.random()*30) { strandedTimer=0; if (stranded.filter(s=>s.ttl>0).length < CFG.STRANDED_CAP) spawnStranded(); }
+  for (const s of stranded) {
+    s.ttl -= dt; if (s.ttl<=0) continue;
+    if (s.escorting) {
+      s.ttl = 999;
+      const dx=ship.x-s.x, dy=ship.y-s.y, dist=Math.hypot(dx,dy);
+      if (dist > 140) {
+        const ta=Math.atan2(dx,-dy), da=angleDiff(ta,s.angle);
+        s.angle += Math.sign(da)*Math.min(Math.abs(da),2*dt);
+        const spd=Math.min(dist*.5,260);
+        s.vx += Math.sin(s.angle)*spd*dt*2; s.vy -= Math.cos(s.angle)*spd*dt*2;
+      }
+      s.vx*=Math.pow(.94,dt*60); s.vy*=Math.pow(.94,dt*60); s.x+=s.vx*dt; s.y+=s.vy*dt;
+      for (const st of allNearby()) {
+        if (!st) continue;
+        if (Math.hypot(s.x-st.x, s.y-st.y) < st.radius*0.8) {
+          const reward = CFG.ESCORT_REWARD + Math.floor(karma*10);
+          ship.credits += reward; changeKarma(5,'Escort delivered');
+          s.escorting=false; s.helped=true; s.ttl=0;
+          addLog('Escort delivered to '+st.name+' · +'+reward+' CR');
+          showEventBanner('ESCORT COMPLETE', '+'+reward.toLocaleString()+' CR');
+          updateHUD(); break;
+        }
+      }
+    } else {
+      s.angle += dt*.08;
+      if (Math.hypot(ship.x-s.x,ship.y-s.y) < 140 && !s.helped && !s.looted && !strandedOpen() && !modalOpen()) openStranded(s);
+    }
+  }
+  for (let i=stranded.length-1; i>=0; i--) if (stranded[i].ttl<=0) stranded.splice(i,1);
+}
+
+function drawStranded() {
+  for (const s of stranded) {
+    if (s.ttl <= 0) continue;
+    const sx=wx(s.x), sy=wy(s.y);
+    if (sx<-100||sx>canvas.width+100||sy<-100||sy>canvas.height+100) {
+      if (!s.escorting) continue;
+      const ccx=canvas.width/2, ccy=canvas.height/2;
+      const ang=Math.atan2(sy-ccy,sx-ccx), margin=100;
+      const ix=Math.cos(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccx;
+      const iy=Math.sin(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccy;
+      const pulse=.5+.5*Math.abs(Math.sin(Date.now()*.005));
+      ctx.save(); ctx.translate(ix,iy); ctx.rotate(ang+Math.PI/2);
+      ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(10,8); ctx.lineTo(-10,8); ctx.closePath();
+      ctx.strokeStyle=wa(PAL.ink,pulse); ctx.lineWidth=1.2; ctx.stroke(); ctx.restore();
+      ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,pulse); ctx.textAlign='center'; ctx.fillText('ESCORT',ix,iy+22);
+      continue;
+    }
+    ctx.save(); ctx.translate(sx,sy); ctx.rotate(s.angle);
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(7,7); ctx.lineTo(4,5); ctx.lineTo(0,11); ctx.lineTo(-4,5); ctx.lineTo(-7,7); ctx.closePath();
+    ctx.strokeStyle = s.escorting ? PAL.ink : wa(PAL.ink,.4); ctx.lineWidth=1;
+    if (!s.escorting) ctx.setLineDash([3,2]);
+    ctx.stroke(); ctx.setLineDash([]); ctx.restore();
+    if (!s.escorting) {
+      const pulse=.4+.6*Math.abs(Math.sin(Date.now()*.003));
+      ctx.beginPath(); ctx.arc(sx,sy,26,0,Math.PI*2); ctx.strokeStyle=wa(PAL.ink,pulse*.4); ctx.lineWidth=.8; ctx.stroke();
+    }
+    ctx.font='9px Share Tech Mono'; ctx.textAlign='center';
+    ctx.fillStyle = s.escorting ? PAL.ink : wa(PAL.ink,.7);
+    ctx.fillText(s.escorting ? 'ESCORTING · '+s.name : 'SOS · '+s.name, sx, sy-(s.escorting?34:24));
+  }
+}
+
+document.getElementById('btn-help-parts').addEventListener('click', () => {
+  if (!activeStranded) return;
+  if ((ship.cargo.PARTS||0) < 5) { showMsg('NEED 5× PARTS'); return; }
+  ship.cargo.PARTS -= 5; if (ship.cargo.PARTS<=0) delete ship.cargo.PARTS;
+  ship.credits += CFG.PARTS_REWARD; changeKarma(5,'Helped stranded'); activeStranded.helped=true;
+  addLog('Parts delivered · +'+CFG.PARTS_REWARD+' CR');
+  document.getElementById('stranded-modal').classList.remove('open'); activeStranded=null; updateHUD();
+});
+document.getElementById('btn-help-escort').addEventListener('click', () => {
+  if (!activeStranded) return;
+  activeStranded.escorting=true; activeStranded.vx=0; activeStranded.vy=0;
+  changeKarma(2,'Escort accepted'); addLog('Escorting '+activeStranded.name);
+  showEventBanner('ESCORT ACTIVE','Lead stranded ship to any station');
+  document.getElementById('stranded-modal').classList.remove('open'); activeStranded=null;
+});
+document.getElementById('btn-loot').addEventListener('click', () => {
+  if (!activeStranded) return;
+  for (let i=0;i<5;i++) drops.push({x:activeStranded.x+(Math.random()-.5)*80,y:activeStranded.y+(Math.random()-.5)*80,good:GOODS[Math.floor(Math.random()*GOODS.length)],qty:Math.floor(Math.random()*5+3),ttl:3000,isSignal:false});
+  activeStranded.looted=true; changeKarma(-10,'Looted stranded');
+  document.getElementById('stranded-modal').classList.remove('open'); activeStranded=null;
+});
+document.getElementById('btn-strand-leave').addEventListener('click', () => {
+  document.getElementById('stranded-modal').classList.remove('open'); activeStranded=null;
+});
+
+
+// ── ## BOSS ───────────────────────────────────────────────────────────────────
+
+let activeBoss     = null;
+let bountyAccepted = false;
+let bountyReward   = 0;
+const bossProj     = [];
+
+function spawnBoss() {
+  const a=Math.random()*Math.PI*2, d=2500+Math.random()*1500;
+  activeBoss = {
+    x:ship.x+Math.cos(a)*d, y:ship.y+Math.sin(a)*d,
+    vx:0, vy:0, angle:0,
+    hull:CFG.BOSS_HULL, hullMax:CFG.BOSS_HULL,
+    maxSpeed:150, thrust:120, rotSpeed:1, phase:1, radius:55,
+    attackTimer:0, attackCooldown:2, tentacleRot:0, dead:false,
+  };
+  addLog('⚠ ALIEN PRESENCE DETECTED');
+  showEventBanner('★ ALIEN PRESENCE','Boss fight — destroy for bounty');
+}
+
+function updateBoss(dt) {
+  if (!activeBoss || activeBoss.dead) return;
+  const b=activeBoss; b.tentacleRot+=dt*.4;
+  const hpct=b.hull/b.hullMax;
+  b.phase = hpct<=.33 ? 3 : hpct<=.66 ? 2 : 1;
+  const dx=ship.x-b.x, dy=ship.y-b.y, dist=Math.hypot(dx,dy);
+  const da=angleDiff(Math.atan2(dx,-dy), b.angle);
+  b.angle += Math.sign(da)*Math.min(Math.abs(da), b.rotSpeed*dt);
+  const sm = b.phase===3?1.6:b.phase===2?1.2:1;
+  if (dist>250) { b.vx+=Math.sin(b.angle)*b.thrust*sm*dt; b.vy-=Math.cos(b.angle)*b.thrust*sm*dt; }
+  const spd=Math.hypot(b.vx,b.vy), ms=b.maxSpeed*sm;
+  if (spd>ms) { b.vx=(b.vx/spd)*ms; b.vy=(b.vy/spd)*ms; }
+  b.vx*=Math.pow(.985,dt*60); b.vy*=Math.pow(.985,dt*60); b.x+=b.vx*dt; b.y+=b.vy*dt;
+
+  b.attackTimer += dt;
+  const cd=b.phase===3?.6:b.phase===2?1.2:1.8;
+  if (b.attackTimer > cd && dist < 800) {
+    b.attackTimer=0; const pc=b.phase===3?3:b.phase===2?2:1;
+    for (let i=0;i<pc;i++) { const spread=(i-(pc-1)/2)*.15; bossProj.push({x:b.x,y:b.y,vx:Math.sin(b.angle+spread)*350,vy:-Math.cos(b.angle+spread)*350,ttl:3.5}); }
+  }
+  if (dist < b.radius+14 && ship.invincible<=0 && !ship.shieldActive) { ship.hull=Math.max(0,ship.hull-25); addLog('Boss ram! -25 hull'); ship.invincible=1; if (ship.hull<=0) killShip(); }
+}
+
+function updateBossProj(dt) {
+  for (const p of bossProj) {
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.ttl-=dt; if (p.ttl<=0) continue;
+    if (ship.invincible<=0 && !ship.shieldActive && Math.hypot(p.x-ship.x,p.y-ship.y)<14) { ship.hull=Math.max(0,ship.hull-18); addLog('Projectile hit! -18 hull'); p.ttl=0; if (ship.hull<=0) killShip(); }
+  }
+  for (let i=bossProj.length-1;i>=0;i--) if (bossProj[i].ttl<=0) bossProj.splice(i,1);
+}
+
+function hitBoss(damage) {
+  if (!activeBoss || activeBoss.dead) return;
+  activeBoss.hull -= damage;
+  if (activeBoss.hull <= 0) {
+    activeBoss.dead=true; addLog('★ ALIEN VANQUISHED ★');
+    for (let i=0;i<5;i++) drops.push({x:activeBoss.x+(Math.random()-.5)*120,y:activeBoss.y+(Math.random()-.5)*120,good:'ALIEN-TECH',qty:Math.floor(Math.random()*3+2),ttl:3500,isSignal:true});
+    if (bountyAccepted) { ship.credits+=bountyReward; addLog('Bounty: +'+bountyReward+' CR'); bountyAccepted=false; bountyReward=0; }
+    activeBoss=null; bossProj.length=0;
+  }
+}
+
+function drawBoss() {
+  if (!activeBoss || activeBoss.dead) return;
+  const b=activeBoss, sx=wx(b.x), sy=wy(b.y);
+  if (sx<-300||sx>canvas.width+300||sy<-300||sy>canvas.height+300) {
+    const ccx=canvas.width/2, ccy=canvas.height/2;
+    const ang=Math.atan2(sy-ccy,sx-ccx), margin=120;
+    const ix=Math.cos(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccx;
+    const iy=Math.sin(ang)*Math.min(canvas.width/2-margin,canvas.height/2-margin)+ccy;
+    ctx.save(); ctx.translate(ix,iy); ctx.rotate(ang+Math.PI/2);
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(10,8); ctx.lineTo(-10,8); ctx.closePath();
+    ctx.strokeStyle=PAL.ink; ctx.lineWidth=2; ctx.stroke(); ctx.restore();
+    ctx.font='10px Share Tech Mono'; ctx.fillStyle=PAL.ink; ctx.textAlign='center'; ctx.fillText('ALIEN',ix,iy+24);
+    return;
+  }
+  ctx.save(); ctx.translate(sx,sy);
+  for (let i=0;i<8;i++) {
+    const a=b.tentacleRot+(i/8)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(0,0);
+    for (let r=0;r<=80;r+=8) { const wobble=Math.sin(b.tentacleRot*3+r*.1+i)*8,ang=a+wobble*.01; ctx.lineTo(Math.cos(ang)*r,Math.sin(ang)*r); }
+    ctx.strokeStyle=wa(PAL.ink,.45); ctx.lineWidth=1.5; ctx.stroke();
+  }
+  ctx.beginPath();
+  for (let i=0;i<12;i++) { const a=(i/12)*Math.PI*2, r=b.radius+Math.sin(b.tentacleRot*4+i)*4; if (i===0) ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
+  ctx.closePath(); ctx.fillStyle='#000'; ctx.fill(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0,0,14,0,Math.PI*2); ctx.fillStyle=PAL.ink; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill();
+  ctx.restore();
+  const bw=120;
+  ctx.fillStyle=wa(PAL.ink,.08); ctx.fillRect(sx-bw/2,sy-b.radius-18,bw,6);
+  ctx.fillStyle=PAL.ink; ctx.fillRect(sx-bw/2,sy-b.radius-18,bw*(b.hull/b.hullMax),6);
+  ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,.6); ctx.textAlign='center';
+  ctx.fillText('ALIEN PRESENCE · PHASE '+b.phase, sx, sy-b.radius-28);
+  for (const p of bossProj) { const psx=wx(p.x),psy=wy(p.y); ctx.beginPath(); ctx.arc(psx,psy,4,0,Math.PI*2); ctx.fillStyle=PAL.ink; ctx.fill(); }
+}
+
+
+// ── ## KARMA ─────────────────────────────────────────────────────────────────
+
+let karma = 0;
+function changeKarma(d, reason) {
+  karma += d;
+  if (reason) addLog(reason + ' (' + (d>0?'+':'') + d + ' karma)');
+}
+
+
+// ── ## MINIMAP ────────────────────────────────────────────────────────────────
+
+function drawMinimap() {
+  const W=mmCv.width, H=mmCv.height;
+  const isFS = mmCv.classList.contains('fullscreen');
+  mmx.clearRect(0,0,W,H);
+  const mmAlpha = currentTheme==='dark' ? '.95' : '.95';
+  mmx.fillStyle = isFS ? PAL.bg : (currentTheme==='dark' ? 'rgba(13,12,16,.95)' : 'rgba(245,243,238,.95)'); mmx.fillRect(0,0,W,H);
+  const range = isFS ? (8000/mmZoom) : 2500;
+  const scale = Math.min(W,H) / (range*2);
+  const cx=W/2, cy=H/2;
+  const viewX = ship.x + mapPanX;
+  const viewY = ship.y + mapPanY;
+  const mx2=x=>cx+(x-viewX)*scale, my2=y=>cy+(y-viewY)*scale;
+
+  if (!isFS) { mmx.beginPath(); mmx.arc(cx,cy,Math.min(W,H)/2-2,0,Math.PI*2); mmx.strokeStyle=wa(PAL.ink,.2); mmx.lineWidth=1; mmx.stroke(); }
+  if (isFS) {
+    mmx.strokeStyle=wa(PAL.ink,.05); mmx.lineWidth=1;
+    const gs = isFS && mmZoom>3 ? 3000 : 1000;
+    for (let x=Math.floor((viewX-range)/gs)*gs; x<=viewX+range; x+=gs) { mmx.beginPath(); mmx.moveTo(mx2(x),0); mmx.lineTo(mx2(x),H); mmx.stroke(); }
+    for (let y=Math.floor((viewY-range)/gs)*gs; y<=viewY+range; y+=gs) { mmx.beginPath(); mmx.moveTo(0,my2(y)); mmx.lineTo(W,my2(y)); mmx.stroke(); }
+  }
+
+  if (!isFS) { mmx.save(); mmx.beginPath(); mmx.arc(cx,cy,Math.min(W,H)/2-3,0,Math.PI*2); mmx.clip(); }
+
+  const drawStBlip = st => {
+    const bx=mx2(st.x), by=my2(st.y);
+    if (bx<-20||bx>W+20||by<-20||by>H+20) return;
+    const sz = isFS ? Math.max(4, st.radius*scale*1.5) : 4;
+    const isContract = activeContract && activeContract.to===st.name;
+    mmx.fillStyle = isContract ? PAL.accent : PAL.ink;
+    mmx.fillRect(bx-sz/2, by-sz/2, sz, sz);
+    if (isFS && mmZoom>.6) { mmx.font='9px Share Tech Mono'; mmx.fillStyle=isContract?PAL.accent:wa(PAL.ink,.6); mmx.textAlign='center'; mmx.fillText(st.name,bx,by+sz+10); }
+    if (isContract) { mmx.beginPath(); mmx.arc(bx,by,sz*2.5,0,Math.PI*2); mmx.strokeStyle=wa(PAL.accent,.5); mmx.lineWidth=1; mmx.stroke(); }
+  };
+  drawStBlip(homeStation);
+  const cr2 = isFS ? Math.ceil(range/CFG.CHUNK)+1 : 3;
+  const pcx2=Math.floor(viewX/CFG.CHUNK), pcy2=Math.floor(viewY/CFG.CHUNK);
+  for (let dx2=-cr2;dx2<=cr2;dx2++) for (let dy2=-cr2;dy2<=cr2;dy2++) { const s=getStation(pcx2+dx2,pcy2+dy2); if (s&&s.discovered) drawStBlip(s); }
+
+  for (const m of meteors) { if (m.dead) continue; const bx=mx2(m.x),by=my2(m.y); if(bx<-10||bx>W+10||by<-10||by>H+10) continue; mmx.fillStyle=wa(PAL.ink,.2); mmx.fillRect(bx-2,by-2,4,4); }
+  for (const e of enemies) { if (e.dead) continue; const bx=mx2(e.x),by=my2(e.y); const sz=isFS?5:3; mmx.fillStyle=wa(PAL.ink,.4); mmx.fillRect(bx-sz/2,by-sz/2,sz,sz); }
+  for (const d of drops)   { if (d.ttl<0) continue; const bx=mx2(d.x),by=my2(d.y); mmx.fillStyle=wa(PAL.ink,.6); mmx.fillRect(bx-2,by-2,4,4); }
+  for (const bh of blackHoles) { const bx=mx2(bh.x),by=my2(bh.y); mmx.beginPath(); mmx.arc(bx,by,isFS?6:4,0,Math.PI*2); mmx.strokeStyle=wa(PAL.ink,.4); mmx.lineWidth=1.5; mmx.stroke(); }
+  if (activeBoss && !activeBoss.dead) {
+    const bx=Math.max(8,Math.min(W-8,mx2(activeBoss.x))), by=Math.max(8,Math.min(H-8,my2(activeBoss.y)));
+    const pa=.6+.4*Math.abs(Math.sin(Date.now()*.006));
+    mmx.beginPath(); mmx.arc(bx,by,isFS?9:6,0,Math.PI*2); mmx.strokeStyle=wa(PAL.ink,pa); mmx.lineWidth=2; mmx.stroke();
+    mmx.font=(isFS?'10':'8')+'px Share Tech Mono'; mmx.fillStyle=wa(PAL.ink,pa); mmx.textAlign='center'; mmx.fillText('★',bx,by+(isFS?4:3));
+  }
+
+  // Player blip
+  mmx.save(); mmx.translate(mx2(ship.x), my2(ship.y)); mmx.rotate(ship.angle);
+  const ps=isFS?8:5;
+  mmx.beginPath(); mmx.moveTo(0,-ps); mmx.lineTo(ps*.6,ps*.6); mmx.lineTo(-ps*.6,ps*.6); mmx.closePath();
+  mmx.fillStyle=PAL.ink; mmx.fill(); mmx.restore();
+  if (!isFS) mmx.restore();
+
+  if (isFS) {
+    document.getElementById('stats-discovered').textContent = 'DISCOVERED: ' + (discovered.size+1);
+    document.getElementById('stats-zoom').textContent = 'ZOOM: ' + mmZoom.toFixed(1) + 'x';
+  }
+}
+
+
+// ── ## HUD ────────────────────────────────────────────────────────────────────
+
+function updateHUD() {
+  const spd = Math.hypot(ship.vx, ship.vy);
+  const deg = ((ship.angle*180/Math.PI)%360+360)%360;
+  document.getElementById('hud-x').textContent     = fmtDist(Math.abs(Math.floor(ship.x))) + (ship.x<0?' W':' E');
+  document.getElementById('hud-y').textContent     = fmtDist(Math.abs(Math.floor(ship.y))) + (ship.y<0?' N':' S');
+  document.getElementById('hud-spd').textContent   = Math.floor(spd) + ' ls/s' + (ship.speedMode === 'COSMIC' && ship.cosmicBoostTime > 0.1 ? ' ×' + Math.pow(2, ship.cosmicBoostTime*1.1).toFixed(1) : '');
+  document.getElementById('hud-hdg').textContent   = Math.floor(deg);
+  document.getElementById('hud-fuel').textContent  = Math.floor(ship.fuel);
+  document.getElementById('hud-hull').textContent  = Math.floor(ship.hull);
+  document.getElementById('hud-energy').textContent= Math.floor(ship.energy);
+  document.getElementById('hud-heat').textContent  = Math.floor(ship.heat);
+  document.getElementById('hud-kills').textContent = ship.kills;
+  document.getElementById('bar-fuel').style.width  = ship.fuel + '%';
+  document.getElementById('bar-hull').style.width  = ship.hull + '%';
+  document.getElementById('bar-energy').style.width= ship.energy + '%';
+  document.getElementById('bar-heat').style.width  = ship.heat + '%';
+  document.getElementById('bar-fuel').className    = 'bfill' + (ship.fuel<20?' danger':ship.fuel<40?' warn':'');
+  document.getElementById('bar-hull').className    = 'bfill' + (ship.hull<25?' danger':ship.hull<50?' warn':'');
+  document.getElementById('bar-heat').className    = 'bfill' + (ship.heat>80?' danger':ship.heat>50?' warn':'');
+  document.getElementById('hud-laser').textContent = ship.heat>=100?'OVERHEAT':ship.laserCooldown>0?'CHARGE':'READY';
+  const shEl = document.getElementById('hud-shield');
+  shEl.textContent = !ship.hasShield?'NONE':ship.shieldActive?'ACTIVE':'READY [Q]';
+  shEl.className   = 'val' + (ship.shieldActive?' ok':'');
+  const inS = inSafe(ship.x, ship.y);
+  const zEl = document.getElementById('hud-zone');
+  const modeTxt = ship.speedMode === 'COSMIC' ? 'COSMIC SPEED' : 'MANEUVERING';
+  zEl.textContent  = inS ? 'SAFE ZONE · ' + modeTxt : modeTxt;
+  zEl.className    = inS ? 'ok dim' : 'dim';
+  document.getElementById('hud-karma').textContent = (karma>=0?'+':'') + karma;
+  document.getElementById('hud-cr').textContent    = ship.credits.toLocaleString();
+  document.getElementById('hud-cu').textContent    = cargoTotal();
+  const list = Object.entries(ship.cargo).filter(([,q])=>q>0);
+  document.getElementById('cargo-list').innerHTML  = list.length ? list.map(([g,q])=>`${q}× ${g}`).join('<br>') : '── EMPTY ──';
+}
+
+const logLines = [];
+function addLog(msg) {
+  logLines.unshift(msg); if (logLines.length > 8) logLines.pop();
+  const el = document.getElementById('log-lines');
+  if (el) el.innerHTML = logLines.map((l,i)=>`<span style="opacity:${1-i*.12}">${l}</span>`).join('<br>');
+}
+
+let ctrlVisible = true;
+const CTRLS = [{k:'W/S',d:'Thrust/Brake'},{k:'A/D',d:'Rotate'},{k:'SPACE',d:'Laser'},{k:'Q',d:'Shield'},{k:'E',d:'Dock'},{k:'1/2',d:'Speed Mode'},{k:'J',d:'Hyperdrive'},{k:'M',d:'Map'},{k:'ESC',d:'Pause'},{k:'H',d:'Hide'},{k:'🎮',d:'Gamepad Active'}];
+
+function drawControls() {
+  if (!ctrlVisible || mmCv.classList.contains('fullscreen')) return;
+  const total=CTRLS.length*100, startX=canvas.width/2-total/2, y=canvas.height-52;
+  ctx.font='9px Share Tech Mono'; ctx.textAlign='left';
+  CTRLS.forEach((c,i)=>{
+    const cx2=startX+i*100;
+    ctx.fillStyle=wa(PAL.ink,.55); ctx.fillText('['+c.k+']',cx2,y);
+    ctx.fillStyle=wa(PAL.ink,.25); ctx.fillText(c.d,cx2,y+13);
+  });
+}
+
+function drawVignette() {
+  const vg=ctx.createRadialGradient(canvas.width/2,canvas.height/2,canvas.height*.35,canvas.width/2,canvas.height/2,canvas.height*.88);
+  if (currentTheme === 'dark') {
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(1,'rgba(0,0,0,0.32)');
+  } else {
+    vg.addColorStop(0,'rgba(210,200,185,0)');
+    vg.addColorStop(1,'rgba(190,180,165,0.22)');
+  }
+  ctx.fillStyle=vg; ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+
+// ── ## UI HELPERS ─────────────────────────────────────────────────────────────
+
+function showMsg(text, duration=1800) {
+  const el=document.getElementById('msg-overlay');
+  el.textContent=text; el.style.opacity=1;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.opacity=0, duration);
+}
+
+function showEventBanner(title, sub, duration=4000) {
+  const b=document.getElementById('event-banner');
+  b.innerHTML=`<div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:.3em;color:var(--ink)">${title}</div><div style="font-size:10px;letter-spacing:.2em;color:var(--ink3);margin-top:3px">${sub}</div>`;
+  b.style.opacity='1'; clearTimeout(b._t); b._t=setTimeout(()=>b.style.opacity='0', duration);
+}
+
+function modalOpen() {
+  return document.getElementById('trade-modal').classList.contains('open')
+      || document.getElementById('distress-modal').classList.contains('open')
+      || document.getElementById('death-screen').classList.contains('open')
+      || document.getElementById('hyperdrive-modal').classList.contains('open')
+      || strandedOpen()
+      || isPaused;
+}
+
+
+// ── ## SAVE / LOAD ────────────────────────────────────────────────────────────
+
+function saveGame() {
+  localStorage.setItem('vt_save', JSON.stringify({
+    x:ship.x, y:ship.y, vx:ship.vx, vy:ship.vy, angle:ship.angle,
+    fuel:ship.fuel, hull:ship.hull, credits:ship.credits,
+    kills:ship.kills, cargo:ship.cargo, hasShield:ship.hasShield,
+    karma, seed:SEED, contractsDone,
+    discovered: Array.from(discovered),
+  }));
+}
+
+function loadGame() {
+  const raw=localStorage.getItem('vt_save'); if (!raw) return;
+  try {
+    const s=JSON.parse(raw); if (s.seed !== SEED) return;
+    Object.assign(ship, { x:s.x, y:s.y, vx:s.vx||0, vy:s.vy||0, angle:s.angle||0, fuel:s.fuel, hull:s.hull, credits:s.credits, kills:s.kills||0, cargo:s.cargo||{}, hasShield:s.hasShield||false });
+    karma=s.karma||0; contractsDone=s.contractsDone||0;
+    if (s.discovered) for (const d of s.discovered) {
+      discovered.add(d);
+      if (d !== 'home') {
+        const [ccx,ccy]=d.split(',').map(Number);
+        const st=getStation(ccx,ccy); if (st) st.discovered=true;
+      }
+    }
+  } catch(e) { console.warn('Save load failed:', e); }
+}
+
+setInterval(saveGame, 30000);
+
+
+// ── ## KEYBOARD ───────────────────────────────────────────────────────────────
+
+const keys = {};
+let isPaused = false;
+
+document.addEventListener('keydown', e => {
+  if (e.code==='Escape')    { togglePause(); e.preventDefault(); return; }
+  if (isPaused)             { e.preventDefault(); return; }
+  keys[e.code]=true;
+  if (e.code==='KeyM') toggleMap();
+  if (e.code==='KeyH') ctrlVisible=!ctrlVisible;
+  if (e.code==='KeyO') { ship.credits+=1000; addLog('+ 1000 CREDITS [CHEAT]'); }
+  if (e.code==='KeyE') tryDock();
+  if (e.code==='KeyJ') openHyperdriveMenu();
+  if (e.code==='Digit1') setSpeedMode('MANEUVER');
+  if (e.code==='Digit2') setSpeedMode('COSMIC');
+  if (e.code==='KeyQ') {
+    if (!ship.hasShield)        addLog('Buy shield at station first');
+    else if (ship.energy<20)    addLog('Insufficient energy');
+    else { ship.shieldActive=!ship.shieldActive; addLog(ship.shieldActive?'Shield engaged':'Shield disengaged'); }
+  }
+  e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.code]=false; });
+
+function toggleMap() {
+  const isFS=mmCv.classList.toggle('fullscreen');
+  document.getElementById('minimap-label').classList.toggle('fullscreen');
+  document.getElementById('minimap-stats-fs').classList.toggle('visible', isFS);
+  if (isFS) { 
+    mmCv.width=window.innerWidth; mmCv.height=window.innerHeight; mmZoom=1; 
+    document.getElementById('minimap-label').textContent='STELLAR MAP · [M] CLOSE'; 
+  } else { 
+    mmCv.width=180; mmCv.height=180; 
+    mapPanX = 0; mapPanY = 0; 
+    document.getElementById('minimap-label').textContent='MAP · [M]'; 
+  }
+}
+
+function togglePause() {
+  if (document.getElementById('death-screen').classList.contains('open')) return;
+  if (document.getElementById('hyperdrive-modal').classList.contains('open')) {
+    document.getElementById('hyperdrive-modal').classList.remove('open');
+    return;
+  }
+  isPaused=!isPaused;
+  const m=document.getElementById('pause-modal');
+  if (isPaused) {
+    m.classList.add('open');
+    document.getElementById('trade-modal').classList.remove('open');
+    document.getElementById('pause-credits').textContent  = ship.credits.toLocaleString();
+    document.getElementById('pause-kills').textContent    = ship.kills;
+    document.getElementById('pause-discovered').textContent= discovered.size+1;
+    document.getElementById('pause-contracts').textContent= contractsDone;
+    document.getElementById('pause-seed').textContent     = SEED.toString(16).toUpperCase();
+  } else { m.classList.remove('open'); }
+}
+
+mmCv.addEventListener('click', () => { if (!isPaused && !mmCv.classList.contains('fullscreen')) toggleMap(); });
+mmCv.addEventListener('wheel', e => { if (mmCv.classList.contains('fullscreen')) { e.preventDefault(); mmZoom=Math.max(.3,Math.min(35,mmZoom+(e.deltaY<0?.2:-.2))); } });
+document.getElementById('btn-resume').addEventListener('click', togglePause);
+document.getElementById('btn-save-quit').addEventListener('click', () => { saveGame(); location.reload(); });
+document.getElementById('btn-pause-reset').addEventListener('click', () => { if (confirm('Erase all progress?')) { localStorage.removeItem('vt_save'); localStorage.removeItem('vt_seed'); location.reload(); } });
+document.getElementById('boot-reset').addEventListener('click', () => { if (confirm('Erase all progress?')) { localStorage.removeItem('vt_save'); localStorage.removeItem('vt_seed'); location.reload(); } });
+
+
+// ── ## TOUCH ─────────────────────────────────────────────────────────────────
+
+const joystick = { active:false, startX:0, startY:0, dx:0, dy:0, knobEl:null, zoneEl:null, maxR:40 };
+
+function initTouch() {
+  if (!isTouch) return;
+  joystick.knobEl = document.getElementById('joystick-knob');
+  joystick.zoneEl = document.getElementById('joystick-zone');
+  const jz = joystick.zoneEl;
+  jz.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t=e.changedTouches[0], rect=jz.getBoundingClientRect();
+    joystick.active=true; joystick.startX=rect.left+rect.width/2; joystick.startY=rect.top+rect.height/2;
+    updateJoystick(t.clientX,t.clientY);
+  }, {passive:false});
+  jz.addEventListener('touchmove',  e => { e.preventDefault(); updateJoystick(e.changedTouches[0].clientX,e.changedTouches[0].clientY); }, {passive:false});
+  jz.addEventListener('touchend',   e => {
+    e.preventDefault(); joystick.active=false; joystick.dx=0; joystick.dy=0;
+    joystick.knobEl.style.left='36px'; joystick.knobEl.style.top='36px';
+    keys['KeyW']=keys['KeyA']=keys['KeyD']=keys['KeyS']=false;
+  }, {passive:false});
+
+  const fb = document.getElementById('btn-fire');
+  fb.addEventListener('touchstart', e=>{e.preventDefault();keys['Space']=true;fb.classList.add('active');},{passive:false});
+  fb.addEventListener('touchend',   e=>{e.preventDefault();keys['Space']=false;fb.classList.remove('active');},{passive:false});
+  document.getElementById('btn-dock-touch').addEventListener('touchstart',   e=>{e.preventDefault();tryDock();},{passive:false});
+  document.getElementById('btn-shield-touch').addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if (!ship.hasShield) { addLog('Buy shield first'); return; }
+    ship.shieldActive=!ship.shieldActive;
+    document.getElementById('btn-shield-touch').classList.toggle('active',ship.shieldActive);
+  },{passive:false});
+  document.getElementById('btn-pause-touch').addEventListener('touchstart', e=>{e.preventDefault();togglePause();},{passive:false});
+  document.getElementById('btn-map-touch').addEventListener('touchstart',   e=>{e.preventDefault();toggleMap();},{passive:false});
+  mmCv.addEventListener('touchstart', e=>{e.preventDefault();if(!mmCv.classList.contains('fullscreen'))toggleMap();},{passive:false});
+  canvas.addEventListener('touchmove', e=>e.preventDefault(),{passive:false});
+}
+
+function updateJoystick(cx, cy) {
+  const dx=cx-joystick.startX, dy=cy-joystick.startY;
+  const dist=Math.hypot(dx,dy), maxR=joystick.maxR;
+  const clamp=Math.min(dist,maxR);
+  const nx=(dist?dx/dist:0)*clamp, ny=(dist?dy/dist:0)*clamp;
+  joystick.knobEl.style.left=(65/2-24+nx)+'px'; joystick.knobEl.style.top=(65/2-24+ny)+'px';
+  const D=.15;
+  keys['KeyW']=ny/maxR<-D; keys['KeyS']=ny/maxR>D; keys['KeyA']=nx/maxR<-D; keys['KeyD']=nx/maxR>D;
+}
+initTouch();
+
+
+// ── ## GAMEPAD ───────────────────────────────────────────────────────────────
+
+const GamepadInput = {
+  prev: [],
+  deadzone: 0.2,
+  update: function(dt) {
+    const pads = navigator.getGamepads();
+    let gp = null;
+    for (let i = 0; i < pads.length; i++) {
+        if (pads[i] && pads[i].connected) { gp = pads[i]; break; }
+    }
+    if (!gp) return;
+
+    const justPressed = (btnIdx) => gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed && (!this.prev[btnIdx]);
+    const pressed = (btnIdx) => gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed;
+
+    const inUI = modalOpen() || document.getElementById('boot').style.display !== 'none';
+    const inMap = mmCv.classList.contains('fullscreen');
+
+    if (inUI) {
+      this.handleUI(justPressed);
+    } else if (inMap) {
+      this.handleMap(gp, dt, justPressed, pressed);
+    } else {
+      this.handleGameplay(gp, justPressed, pressed);
+    }
+
+    for(let i=0; i<gp.buttons.length; i++) this.prev[i] = gp.buttons[i].pressed;
+  },
+  
+  handleUI: function(justPressed) {
+    if (justPressed(12)) this.navUI(-1); // D-pad Up
+    if (justPressed(14)) this.navUI(-1); // D-pad Left
+    if (justPressed(13)) this.navUI(1);  // D-pad Down
+    if (justPressed(15)) this.navUI(1);  // D-pad Right
+
+    if (justPressed(0)) this.clickUI();  // A - Confirm
+    if (justPressed(1)) {                // B - Back/Cancel
+      if (isPaused) togglePause();
+      else if (document.getElementById('trade-modal').classList.contains('open')) document.getElementById('trade-close').click();
+      else if (document.getElementById('hyperdrive-modal').classList.contains('open')) document.getElementById('hyperdrive-close').click();
+      else if (document.getElementById('distress-modal').classList.contains('open')) document.getElementById('btn-drift').click();
+      else if (document.getElementById('stranded-modal').classList.contains('open')) document.getElementById('btn-strand-leave').click();
+    }
+  },
+
+  navUI: function(dir) {
+    const boot = document.getElementById('boot');
+    const isBootOpen = boot && boot.style.display !== 'none';
+    const modal = document.querySelector('.open') || (isBootOpen ? boot : null);
+    if (!modal && !isPaused) return;
+
+    const container = isPaused ? document.getElementById('pause-modal') : modal;
+    
+    // Select standard buttons + custom interactive divs
+    const focusables = Array.from(container.querySelectorAll('button:not([disabled]), .cjob:not(.dim), .hd-dest:not(.no-fuel)'))
+                            .filter(el => el.offsetParent !== null);
+                            
+    if (focusables.length === 0) return;
+
+    let idx = focusables.findIndex(el => el.classList.contains('gp-focus'));
+    if (idx !== -1) focusables[idx].classList.remove('gp-focus');
+
+    idx += dir;
+    if (idx < 0) idx = focusables.length - 1;
+    if (idx >= focusables.length) idx = 0;
+
+    const target = focusables[idx];
+    target.classList.add('gp-focus');
+    if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  },
+
+  clickUI: function() {
+    const target = document.querySelector('.gp-focus');
+    if (target) {
+      if (target.tagName === 'BUTTON') target.click();
+      else if (target.onclick) target.onclick();
+    } else {
+        // Fallback: If nothing has focus, press the primary visible button if available
+        const modal = document.querySelector('.open') || document.getElementById('boot');
+        if(modal) {
+            const firstBtn = modal.querySelector('button:not([disabled])');
+            if(firstBtn) firstBtn.click();
+        }
+    }
+  },
+
+  handleMap: function(gp, dt, justPressed, pressed) {
+    if (justPressed(12) || justPressed(1)) { toggleMap(); return; } // D-pad Up or B closes Map
+
+    let lx = gp.axes[0]; 
+    let ly = gp.axes[1];
+    if (Math.abs(lx) > this.deadzone) mapPanX += lx * 3000 * dt / mmZoom;
+    if (Math.abs(ly) > this.deadzone) mapPanY += ly * 3000 * dt / mmZoom;
+
+    if (pressed(7) || gp.axes[5] > 0.1) mmZoom = Math.min(35, mmZoom + 2 * dt);  // RT = Zoom In
+    if (pressed(6) || gp.axes[2] > 0.1) mmZoom = Math.max(0.3, mmZoom - 2 * dt); // LT = Zoom Out
+  },
+
+  handleGameplay: function(gp, justPressed, pressed) {
+    // RT / LT - Throttle / Brake
+    keys['KeyW'] = pressed(7) || gp.axes[5] > 0.1;
+    keys['KeyS'] = pressed(6) || gp.axes[2] > 0.1;
+
+    // Left Stick - Steering
+    let lx = gp.axes[0];
+    if (lx < -this.deadzone) { keys['KeyA'] = true; keys['KeyD'] = false; }
+    else if (lx > this.deadzone) { keys['KeyD'] = true; keys['KeyA'] = false; }
+    else { keys['KeyA'] = false; keys['KeyD'] = false; }
+
+    if (justPressed(0)) keys['Space'] = true;
+    if (!pressed(0)) keys['Space'] = false;
+
+    if (justPressed(4)) setSpeedMode('MANEUVER'); // LB
+    if (justPressed(5)) setSpeedMode('COSMIC');   // RB
+    
+    if (justPressed(9)) openHyperdriveMenu();     // Menu
+    
+    if (justPressed(2)) {                         // X - Shield
+        if (!ship.hasShield) addLog('Buy shield at station first');
+        else if (ship.energy<20) addLog('Insufficient energy');
+        else { ship.shieldActive = !ship.shieldActive; addLog(ship.shieldActive ? 'Shield engaged' : 'Shield disengaged'); }
+    }
+
+    if (justPressed(10)) tryDock();               // L3
+
+    if (justPressed(1)) togglePause();            // B
+    
+    if (justPressed(12)) toggleMap();             // D-pad Up
+
+    if (justPressed(13)) ctrlVisible = !ctrlVisible; // D-pad Down
+  }
+};
+
+
+// ── ## MAIN LOOP ──────────────────────────────────────────────────────────────
+
+let lastTime = 0;
+
+function loop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, .05);
+  lastTime = ts;
+  
+  GamepadInput.update(dt);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawGalaxy(); drawStars(); drawGrid();
+
+  if (!isPaused) updateDockingInfo();
+
+  drawStation(homeStation);
+  for (const [ccx,ccy] of visChunks(2)) { const st=getStation(ccx,ccy); if (st && st.discovered) drawStation(st); }
+  drawBlackHoles(); drawMeteors(); drawSwarms();
+  drawStranded(); drawBoss(); drawEnemies();
+  drawRouteLine(); drawVelVec(); drawLaser();
+  drawContractNav();
+  drawShipAt(ship, wx(ship.x), wy(ship.y), PAL.ink, true);
+  drawShield(); drawVignette(); drawControls();
+  drawMinimap();
+
+  if (!isPaused) {
+    updateShip(dt); updateEnemies(dt); updateMeteors(dt);
+    updateBlackHoles(dt); updateSwarms(dt); updateStranded(dt);
+    updateBoss(dt); updateBossProj(dt); tickShield(dt); regenStations(dt);
+    updateWormhole(dt);
+
+    for (let i = drops.length-1; i >= 0; i--) {
+      drops[i].ttl -= dt;
+      if (drops[i].ttl < 0) drops.splice(i, 1);
+    }
+    if (drops.length > DROP_CAP) drops.splice(0, drops.length - DROP_CAP);
+  }
+
+  drawDrops();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+
+// ── ## BOOT ───────────────────────────────────────────────────────────────────
+
+
+
+// ── ## THEME UI CONTROLS ──────────────────────────────────────────────────────
+
+function initThemeControls() {
+  // Restore saved preferences
+  const savedTheme  = localStorage.getItem('vt_theme')  || 'light';
+  const savedAccent = localStorage.getItem('vt_accent') || 'cc4400';
+  
+  // Set toggle checkbox state
+  const toggle = document.getElementById('toggle-dark-mode');
+  if (toggle) toggle.checked = (savedTheme === 'dark');
+  updateThemeLabels(savedTheme);
+
+  // Set active chip
+  const chips = document.querySelectorAll('.color-chip');
+  chips.forEach(c => {
+    c.classList.toggle('active', c.dataset.color === savedAccent);
+  });
+
+  // Apply initial theme (will rebuild galaxy if needed after boot)
+  applyTheme(savedTheme, savedAccent);
+
+  // Toggle event
+  if (toggle) {
+    toggle.addEventListener('change', () => {
+      const newTheme = toggle.checked ? 'dark' : 'light';
+      updateThemeLabels(newTheme);
+      applyTheme(newTheme, currentAccentKey);
+    });
+  }
+
+  // Color chip events
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      applyTheme(currentTheme, chip.dataset.color);
+    });
+  });
+}
+
+function updateThemeLabels(theme) {
+  const lLight = document.getElementById('lbl-light');
+  const lDark  = document.getElementById('lbl-dark');
+  if (lLight) lLight.classList.toggle('active', theme === 'light');
+  if (lDark)  lDark.classList.toggle('active',  theme === 'dark');
+}
+
+// Resize galaxy-bg canvas on window resize
+window.addEventListener('resize', () => {
+  const bgCv = document.getElementById('galaxy-bg');
+  if (bgCv) { bgCv.width = window.innerWidth; bgCv.height = window.innerHeight; }
+  if (galaxyCanvas) drawGalaxyBgCanvas();
+});
+
+// Init theme controls immediately (before boot)
+initThemeControls();
+
+document.getElementById('boot-start').addEventListener('click', () => {
+  try {
+    buildGalaxy();
+    loadGame();
+    document.getElementById('boot').style.display = 'none';
+    addLog('System online · SEED:' + SEED.toString(16).toUpperCase());
+    addLog('Milky Way sector · coords in light-seconds');
+    addLog('WASD: thrust/brake · A/D: rotate · SPACE: laser');
+    addLog('1: Maneuvering Mode · 2: Cosmic Speed · J: Hyperdrive');
+    addLog('E: dock (align pad, low speed) · Q: shield');
+    addLog('Hyperdrive fast-travels to stations · costs 2/3 fuel');
+    setTimeout(() => { spawnEnemy(); addLog('⚠ Pirate detected'); }, 9000);
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  } catch(e) {
+    console.error('Boot error:', e);
+    addLog('ERROR: ' + e.message);
+  }
+});
+</script>
+</body>
+</html>
