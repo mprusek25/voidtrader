@@ -1557,6 +1557,10 @@ function getStation(cx, cy) {
       rotSpeed: stType==='torus' ? (0.18 + rng()*0.12) * (rng()<.5?1:-1)
                : stType==='citadel' ? 0
                : (rng()-.5)*.4,
+      // Slow orbital angular speed around the star — kept independent of the
+      // (much faster) visual self-rotation so the station body doesn't whip
+      // around faster than a ship can catch up to dock.
+      orbitSpeed: (rng()-.5) * 0.05,
       stationType: stType,
       platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
       moduleSeeds, asteroidBumps,
@@ -1588,6 +1592,7 @@ function regenStations(dt) {
       }
     }
     st.rotation += st.rotSpeed * dt;
+    st.orbitAngle = (st.orbitAngle || 0) + (st.orbitSpeed || 0) * dt;
   }
 }
 
@@ -1602,9 +1607,10 @@ const dockingInfo = { st:null, padD:Infinity, padWorldX:0, padWorldY:0, shipSpd:
 function getStationBody(st) {
   const isOrbiting = !st.isHome && !st.isBounty;
   const orbitDist  = isOrbiting ? st.radius * 9 : 0;
+  const orbitAngle = st.orbitAngle || 0;
   return {
-    cx: isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x,
-    cy: isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y,
+    cx: isOrbiting ? st.x + Math.cos(orbitAngle)*orbitDist : st.x,
+    cy: isOrbiting ? st.y + Math.sin(orbitAngle)*orbitDist : st.y,
     rot: isOrbiting ? st.rotation*3 : st.rotation*2,
   };
 }
@@ -3090,7 +3096,40 @@ function drawMinimap() {
   if (!isFS) { mmx.save(); mmx.beginPath(); mmx.arc(cx,cy,Math.min(W,H)/2-3,0,Math.PI*2); mmx.clip(); }
 
   const drawStBlip = st => {
-    const bx=mx2(st.x), by=my2(st.y);
+    const isOrbitingSt = !st.isHome && !st.isBounty;
+    // For orbiting stations, st.x/st.y is the STAR's position. The station's
+    // actual body sits somewhere on the orbit ring around it.
+    let bodyX = st.x, bodyY = st.y;
+    if (isOrbitingSt) {
+      const body = getStationBody(st);
+      bodyX = body.cx; bodyY = body.cy;
+
+      // Draw the star itself
+      const starBX = mx2(st.x), starBY = my2(st.y);
+      if (!(starBX<-20||starBX>W+20||starBY<-20||starBY>H+20)) {
+        const starSz = isFS ? Math.max(3, st.radius*scale*0.6) : 3;
+        mmx.save();
+        mmx.fillStyle = wa(PAL.warn, .85);
+        mmx.beginPath(); mmx.arc(starBX, starBY, starSz, 0, Math.PI*2); mmx.fill();
+        // Faint glow ring around the star
+        mmx.strokeStyle = wa(PAL.warn, .25); mmx.lineWidth = 1;
+        mmx.beginPath(); mmx.arc(starBX, starBY, starSz*2, 0, Math.PI*2); mmx.stroke();
+        mmx.restore();
+      }
+
+      // Draw the orbit path so the station's position around the star is clear
+      const orbitR = (st.radius * 9) * scale;
+      if (orbitR > 1.5) {
+        mmx.save();
+        mmx.strokeStyle = wa(PAL.ink, .12); mmx.lineWidth = 1;
+        mmx.setLineDash([2,3]);
+        mmx.beginPath(); mmx.arc(starBX, starBY, orbitR, 0, Math.PI*2); mmx.stroke();
+        mmx.setLineDash([]);
+        mmx.restore();
+      }
+    }
+
+    const bx=mx2(bodyX), by=my2(bodyY);
     if (bx<-20||bx>W+20||by<-20||by>H+20) return;
     const sz = isFS ? Math.max(4, st.radius*scale*1.5) : 4;
     const isContract = activeContract && activeContract.to===st.name;
