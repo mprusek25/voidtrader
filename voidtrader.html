@@ -191,6 +191,23 @@ body{
 .cjob .cinfo{color:var(--ink2);font-size:10px;line-height:1.6;}
 .cjob .crew{color:var(--accent);font-size:11px;font-weight:500;float:right;margin-top:-20px;}
 
+/* Workshop / shipyard panel */
+#workshop-panel{border-top:1px solid rgba(128,128,128,.15);margin-top:12px;padding-top:12px;}
+#workshop-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:var(--ink3);margin-bottom:10px;}
+#workshop-panel h4{font-family:var(--fnt);font-size:8px;letter-spacing:.3em;color:var(--ink3);margin:14px 0 8px;}
+.hullcard{border:1px solid rgba(128,128,128,.15);padding:10px 12px;margin-bottom:6px;}
+.hullcard.owned{border-color:var(--safe);background:rgba(34,204,68,.05);}
+.hullcard .hname{color:var(--ink);font-size:11px;letter-spacing:.1em;margin-bottom:4px;}
+.hullcard .hdesc{color:var(--ink3);font-size:10px;margin-bottom:6px;line-height:1.6;}
+.hullcard .hstats{color:var(--ink2);font-size:9px;letter-spacing:.05em;margin-bottom:8px;line-height:1.7;}
+.hullcard .hprice{color:var(--accent);font-weight:500;float:right;}
+.upgrow{display:grid;grid-template-columns:90px 1fr 70px 90px;gap:8px;align-items:center;margin-bottom:8px;font-size:10px;color:var(--ink2);}
+.upgrow .ulabel{color:var(--ink);letter-spacing:.1em;}
+.upgdots{display:flex;gap:3px;}
+.updot{width:9px;height:9px;border:1px solid rgba(128,128,128,.35);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);}
+.updot.filled{background:var(--accent);border-color:var(--accent);}
+.upgrow .ucost{color:var(--ink3);font-size:9px;text-align:right;}
+
 /* Distress box */
 #distress-box{border:1px solid rgba(128,128,128,.2);border-top:2px solid var(--warn);background:var(--bg);width:400px;padding:24px;text-align:center;font-family:var(--fnt2);pointer-events:all;}
 #distress-box h2{color:var(--warn);font-family:var(--fnt);font-size:14px;letter-spacing:.3em;margin-bottom:10px;}
@@ -494,11 +511,12 @@ body{
     <div>HULL <span class="bbar"><span class="bfill" id="bar-hull" style="width:100%"></span></span> <span class="val" id="hud-hull">100</span>%</div>
     <div>ENGY <span class="bbar"><span class="bfill" id="bar-energy" style="width:100%"></span></span> <span class="val" id="hud-energy">100</span>%</div>
     <div>HEAT <span class="bbar"><span class="bfill" id="bar-heat" style="width:0%"></span></span> <span class="val" id="hud-heat">0</span>%</div>
-    <div style="margin-top:4px" class="dim">LASER <span class="val" id="hud-laser">READY</span> &nbsp; SHIELD <span class="val" id="hud-shield">NONE</span></div>
+    <div style="margin-top:4px" class="dim">CLASS <span class="val" id="hud-class">VOID SKIFF</span></div>
+    <div class="dim">LASER <span class="val" id="hud-laser">READY</span> &nbsp; SHIELD <span class="val" id="hud-shield">NONE</span></div>
     <div class="dim">KILLS <span class="val" id="hud-kills">0</span> &nbsp; KARMA <span class="val" id="hud-karma">0</span></div>
   </div>
   <div class="hp" id="hp-cargo" data-l="CARGO · MANIFEST">
-    <div>HOLD <span class="val" id="hud-cu">0</span>/50 &nbsp; CREDITS <span class="val" id="hud-cr">1,500</span></div>
+    <div>HOLD <span class="val" id="hud-cu">0</span>/<span class="val" id="hud-cu-max">50</span> &nbsp; CREDITS <span class="val" id="hud-cr">1,500</span></div>
     <div id="cargo-list" class="dim" style="margin-top:4px;font-size:10px">── EMPTY ──</div>
   </div>
   <div class="hp" id="hp-log" data-l="SYSTEM · LOG">
@@ -542,6 +560,13 @@ body{
     <h3>DELIVERY CONTRACTS</h3>
     <div id="contract-list"></div>
     <button id="btn-cancel-contract" style="display:none;margin-top:10px;width:100%;padding:8px;border:1px solid rgba(200,0,0,.45);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:10px;letter-spacing:.1em;cursor:pointer">[ CANCEL ACTIVE CONTRACT ]</button>
+  </div>
+  <div id="workshop-panel" style="display:none;">
+    <h3>★ SHIPYARD &amp; FITTING BAY</h3>
+    <h4>AVAILABLE HULLS</h4>
+    <div id="hull-list"></div>
+    <h4>UPGRADE CURRENT HULL</h4>
+    <div id="upgrade-list"></div>
   </div>
   <button id="trade-close">[ UNDOCK ]</button>
 </div></div>
@@ -717,6 +742,18 @@ const CFG = {
   CARGO_MAX:   50,
   FUEL_PRICE:  12,
   SELL_RATIO:  0.80,
+
+  // Base weapon damage per laser hit (modified by weapon upgrades)
+  LASER_DMG_BASE: 35,
+
+  // Upgrade track tuning: per-level bonuses and cost scaling
+  UPGRADE_MAX_LVL:   5,
+  UPG_WEAPON_STEP:   8,     // +laser damage per weapon level
+  UPG_ARMOR_STEP:    0.08,  // -8% incoming hull damage per armor level
+  UPG_STEER_STEP:    0.08,  // +8% thrust/speed/turn-rate per steering level
+  UPG_CARGO_STEP:    10,    // +cargo capacity per level
+  UPG_BASE_COST:     1800,  // base cost of first upgrade level
+  UPG_COST_GROWTH:   1.65,  // cost multiplier per additional level
 
   ENEMY_CAP:   4,
   ENEMY_SPAWN_INTERVAL: 14,
@@ -1078,6 +1115,36 @@ function drawGrid() {
 
 // ── ## SHIP ─────────────────────────────────────────────────────────────────
 
+// Purchasable ship hulls (workshop shipyard). Each defines its OWN base stats;
+// switching ships resets upgrade levels (a different hull, different frame).
+const SHIP_HULLS = [
+  {
+    id:'skiff', name:'VOID SKIFF', cost:0,
+    desc:'Starter hull. Balanced but unremarkable.',
+    weaponDmg:CFG.LASER_DMG_BASE, steerMult:1.0, cargoMax:CFG.CARGO_MAX,
+  },
+  {
+    id:'interceptor', name:'INTERCEPTOR', cost:18000,
+    desc:'Light frame built for speed and turn rate.',
+    weaponDmg:CFG.LASER_DMG_BASE+5, steerMult:1.35, cargoMax:CFG.CARGO_MAX*0.7,
+  },
+  {
+    id:'gunship', name:'GUNSHIP', cost:32000,
+    desc:'Reinforced hull with heavier weapon mounts.',
+    weaponDmg:CFG.LASER_DMG_BASE+20, steerMult:0.9, cargoMax:CFG.CARGO_MAX*0.9,
+  },
+  {
+    id:'freighter', name:'HEAVY FREIGHTER', cost:45000,
+    desc:'Cavernous hold, sluggish handling.',
+    weaponDmg:CFG.LASER_DMG_BASE, steerMult:0.7, cargoMax:CFG.CARGO_MAX*2.4,
+  },
+  {
+    id:'dreadnought', name:'DREADNOUGHT', cost:90000,
+    desc:'Top-tier warship. Strong in every regard.',
+    weaponDmg:CFG.LASER_DMG_BASE+35, steerMult:1.1, cargoMax:CFG.CARGO_MAX*1.5,
+  },
+];
+
 const ship = {
   x:0, y:0, vx:0, vy:0, angle:0,
   thrust:    CFG.SHIP_THRUST,
@@ -1097,6 +1164,16 @@ const ship = {
   shieldActive: false,
   speedMode: 'MANEUVER',
   cosmicBoostTime: 0,
+
+  // ── Shipyard / workshop progression ──
+  hullId:      'skiff',
+  weaponDmg:   SHIP_HULLS[0].weaponDmg,
+  steerMult:   SHIP_HULLS[0].steerMult,
+  // Upgrade levels (0-CFG.UPGRADE_MAX_LVL) for the currently owned hull
+  upgWeapon:   0,
+  upgArmor:    0,
+  upgSteer:    0,
+  upgCargo:    0,
 };
 
 function setSpeedMode(mode) {
@@ -1111,17 +1188,30 @@ function setSpeedMode(mode) {
 }
 
 function applySpeedModeStats() {
+  const sm = ship.steerMult * (1 + CFG.UPG_STEER_STEP * ship.upgSteer);
   if (ship.speedMode === 'MANEUVER') {
-    ship.thrust   = CFG.MANEUVER_THRUST;
-    ship.maxSpeed = CFG.MANEUVER_MAX_SPD;
-    ship.rotSpeed = CFG.MANEUVER_ROT;
+    ship.thrust   = CFG.MANEUVER_THRUST * sm;
+    ship.maxSpeed = CFG.MANEUVER_MAX_SPD * sm;
+    ship.rotSpeed = CFG.MANEUVER_ROT * sm;
   } else {
-    ship.thrust   = CFG.COSMIC_THRUST;
-    ship.maxSpeed = CFG.COSMIC_MAX_SPD;
-    ship.rotSpeed = CFG.COSMIC_ROT;
+    ship.thrust   = CFG.COSMIC_THRUST * sm;
+    ship.maxSpeed = CFG.COSMIC_MAX_SPD * sm;
+    ship.rotSpeed = CFG.COSMIC_ROT * sm;
   }
 }
 applySpeedModeStats();
+
+// ── Effective stat helpers (hull base + upgrade levels) ──────────────────────
+function effWeaponDmg()  { return ship.weaponDmg + CFG.UPG_WEAPON_STEP * ship.upgWeapon; }
+function effCargoMax()   { return Math.round(ship.cargoMax + CFG.UPG_CARGO_STEP * ship.upgCargo); }
+function effArmorReduction() { return Math.min(0.6, CFG.UPG_ARMOR_STEP * ship.upgArmor); } // capped at 60%
+function applyHullDamage(amount) {
+  ship.hull = Math.max(0, ship.hull - amount * (1 - effArmorReduction()));
+}
+// Cost to buy the NEXT level of a given upgrade track (1-indexed level being bought)
+function upgradeCost(currentLvl) {
+  return Math.round(CFG.UPG_BASE_COST * Math.pow(CFG.UPG_COST_GROWTH, currentLvl));
+}
 
 let _trajWarnActive = false;
 function checkTrajectoryWarning() {
@@ -1411,39 +1501,157 @@ function updateShip(dt) {
 
 function drawShipAt(s, sx, sy, col, isPlayer) {
   col = col || PAL.ink;
+  const hullId = isPlayer ? ship.hullId : (s.hullId || 'skiff');
   ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.angle);
 
+  // ── Thruster flame (player only) ──
   if (isPlayer && (keys['KeyW']||keys['ArrowUp']) && s.fuel > 0) {
     const f  = .7 + Math.random()*.3;
     const boostScale = s.speedMode === 'COSMIC' ? 1 + s.cosmicBoostTime * 0.7 : 1;
     const pl = (10 + 20*f) * boostScale;
     const pw = boostScale;
-    ctx.beginPath(); ctx.moveTo(-7*pw,14); ctx.lineTo(0,14+pl*1.15); ctx.lineTo(7*pw,14);
-    ctx.strokeStyle = wa(PAL.accent, Math.min(.25, .1*f*boostScale)); ctx.lineWidth = 8*pw; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-4*pw,14); ctx.lineTo(0,14+pl);      ctx.lineTo(4*pw,14);
-    ctx.strokeStyle = wa(PAL.accent, .4*f); ctx.lineWidth = 2.5*pw; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-2,14); ctx.lineTo(0,14+pl*.55); ctx.lineTo(2,14);
-    ctx.strokeStyle = wa(PAL.ink, .75*f);  ctx.lineWidth = 1.2;  ctx.stroke();
+    // Extra engine nozzles for gunship / dreadnought
+    const exhaustPts = hullId === 'gunship' ? [[-9,16],[9,16]] :
+                       hullId === 'dreadnought' ? [[-14,20],[0,18],[14,20]] :
+                       hullId === 'freighter'   ? [[-10,20],[10,20]] :
+                       [[0,14]];
+    for (const [ex, ey] of exhaustPts) {
+      ctx.beginPath(); ctx.moveTo(ex-7*pw, ey); ctx.lineTo(ex, ey+pl*1.15); ctx.lineTo(ex+7*pw, ey);
+      ctx.strokeStyle = wa(PAL.accent, Math.min(.25, .1*f*boostScale)); ctx.lineWidth = 8*pw; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex-4*pw, ey); ctx.lineTo(ex, ey+pl); ctx.lineTo(ex+4*pw, ey);
+      ctx.strokeStyle = wa(PAL.accent, .4*f); ctx.lineWidth = 2.5*pw; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ex-2, ey); ctx.lineTo(ex, ey+pl*.55); ctx.lineTo(ex+2, ey);
+      ctx.strokeStyle = wa(PAL.ink, .75*f);  ctx.lineWidth = 1.2; ctx.stroke();
+    }
   }
 
-  ctx.beginPath();
-  ctx.moveTo(0,-22); ctx.lineTo(4,-12); ctx.lineTo(13,7); ctx.lineTo(8,14);
-  ctx.lineTo(4,9);   ctx.lineTo(0,16);  ctx.lineTo(-4,9); ctx.lineTo(-8,14);
-  ctx.lineTo(-13,7); ctx.lineTo(-4,-12); ctx.closePath();
-  ctx.fillStyle = wa(col, .05); ctx.fill();
-  ctx.strokeStyle = col; ctx.lineWidth = isPlayer ? 1.4 : 1; ctx.stroke();
+  const lw = isPlayer ? 1.4 : 1;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = lw;
 
-  ctx.beginPath(); ctx.moveTo(-2.5,-13); ctx.lineTo(0,-20); ctx.lineTo(2.5,-13);
-  ctx.strokeStyle = isPlayer ? PAL.accent : wa(col, .6); ctx.lineWidth = .9; ctx.stroke();
+  if (hullId === 'skiff' || !isPlayer) {
+    // ── VOID SKIFF — original balanced shape ──
+    ctx.beginPath();
+    ctx.moveTo(0,-22); ctx.lineTo(4,-12); ctx.lineTo(13,7); ctx.lineTo(8,14);
+    ctx.lineTo(4,9);   ctx.lineTo(0,16);  ctx.lineTo(-4,9); ctx.lineTo(-8,14);
+    ctx.lineTo(-13,7); ctx.lineTo(-4,-12); ctx.closePath();
+    ctx.fillStyle = wa(col, .05); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2.5,-13); ctx.lineTo(0,-20); ctx.lineTo(2.5,-13);
+    ctx.strokeStyle = isPlayer ? PAL.accent : wa(col, .6); ctx.lineWidth = .9; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(11,5); ctx.moveTo(-4,-10); ctx.lineTo(-11,5);
+    ctx.strokeStyle = wa(col, .3); ctx.lineWidth = .7; ctx.stroke();
 
-  ctx.beginPath(); ctx.moveTo(4,-10); ctx.lineTo(11,5); ctx.moveTo(-4,-10); ctx.lineTo(-11,5);
-  ctx.strokeStyle = wa(col, .3); ctx.lineWidth = .7; ctx.stroke();
+  } else if (hullId === 'interceptor') {
+    // ── INTERCEPTOR — long narrow dart, swept delta wings ──
+    ctx.beginPath();
+    ctx.moveTo(0,-28); ctx.lineTo(3,-14); ctx.lineTo(18,8); ctx.lineTo(10,16);
+    ctx.lineTo(4,8);   ctx.lineTo(0,18); ctx.lineTo(-4,8); ctx.lineTo(-10,16);
+    ctx.lineTo(-18,8); ctx.lineTo(-3,-14); ctx.closePath();
+    ctx.fillStyle = wa(col, .05); ctx.fill(); ctx.stroke();
+    // Needle nose accent
+    ctx.beginPath(); ctx.moveTo(-1.5,-18); ctx.lineTo(0,-28); ctx.lineTo(1.5,-18);
+    ctx.strokeStyle = PAL.accent; ctx.lineWidth = 1.1; ctx.stroke();
+    // Swept leading edges
+    ctx.beginPath(); ctx.moveTo(3,-12); ctx.lineTo(18,4); ctx.moveTo(-3,-12); ctx.lineTo(-18,4);
+    ctx.strokeStyle = wa(col, .35); ctx.lineWidth = .8; ctx.stroke();
+    // Wing trailing slot
+    ctx.beginPath(); ctx.moveTo(10,14); ctx.lineTo(14,8); ctx.moveTo(-10,14); ctx.lineTo(-14,8);
+    ctx.strokeStyle = wa(PAL.accent, .5); ctx.lineWidth = 1; ctx.stroke();
 
+  } else if (hullId === 'gunship') {
+    // ── GUNSHIP — wide body, twin wing cannons, blunt nose ──
+    ctx.beginPath();
+    ctx.moveTo(0,-20); ctx.lineTo(5,-10); ctx.lineTo(18,2); ctx.lineTo(22,10);
+    ctx.lineTo(14,18); ctx.lineTo(6,12); ctx.lineTo(0,18);
+    ctx.lineTo(-6,12); ctx.lineTo(-14,18); ctx.lineTo(-22,10);
+    ctx.lineTo(-18,2); ctx.lineTo(-5,-10); ctx.closePath();
+    ctx.fillStyle = wa(col, .07); ctx.fill(); ctx.stroke();
+    // Blunt nose bar
+    ctx.beginPath(); ctx.moveTo(-4,-20); ctx.lineTo(4,-20);
+    ctx.strokeStyle = isPlayer ? PAL.accent : wa(col,.7); ctx.lineWidth = 2; ctx.stroke();
+    // Twin wing cannon barrels
+    ctx.beginPath();
+    ctx.moveTo(20,4); ctx.lineTo(28,-4); // right cannon
+    ctx.moveTo(-20,4); ctx.lineTo(-28,-4); // left cannon
+    ctx.strokeStyle = wa(col, .8); ctx.lineWidth = 2.2; ctx.stroke();
+    // Cannon tips (glowing accent dots)
+    ctx.beginPath(); ctx.arc(28,-4, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.accent, .7); ctx.fill();
+    ctx.beginPath(); ctx.arc(-28,-4, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.accent, .7); ctx.fill();
+    // Hull brace line
+    ctx.beginPath(); ctx.moveTo(5,-8); ctx.lineTo(17,0); ctx.moveTo(-5,-8); ctx.lineTo(-17,0);
+    ctx.strokeStyle = wa(col, .25); ctx.lineWidth = .7; ctx.stroke();
+
+  } else if (hullId === 'freighter') {
+    // ── HEAVY FREIGHTER — wide boxy hull, blunt bow, large cargo pod ──
+    ctx.beginPath();
+    ctx.moveTo(-4,-24); ctx.lineTo(4,-24);      // flat bow
+    ctx.lineTo(8,-16); ctx.lineTo(20,-4);
+    ctx.lineTo(24,8);  ctx.lineTo(20,22);
+    ctx.lineTo(6,26);  ctx.lineTo(0,24);
+    ctx.lineTo(-6,26); ctx.lineTo(-20,22);
+    ctx.lineTo(-24,8); ctx.lineTo(-20,-4);
+    ctx.lineTo(-8,-16); ctx.closePath();
+    ctx.fillStyle = wa(col, .08); ctx.fill(); ctx.stroke();
+    // Central cargo pod outline
+    ctx.beginPath(); ctx.rect(-12, -4, 24, 24);
+    ctx.strokeStyle = wa(col, .2); ctx.lineWidth = .8; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+    // Forward turret ring
+    ctx.beginPath(); ctx.arc(0, -18, 6, 0, Math.PI*2);
+    ctx.strokeStyle = wa(isPlayer ? PAL.accent : col, .75); ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -18, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = wa(isPlayer ? PAL.accent : col, .5); ctx.fill();
+
+  } else if (hullId === 'dreadnought') {
+    // ── DREADNOUGHT — armoured angular warship, triple guns ──
+    ctx.beginPath();
+    ctx.moveTo(0,-26); ctx.lineTo(6,-14); ctx.lineTo(10,-8);
+    ctx.lineTo(26,-2); ctx.lineTo(28,8);
+    ctx.lineTo(18,20); ctx.lineTo(8,16);
+    ctx.lineTo(4,22);  ctx.lineTo(0,24);
+    ctx.lineTo(-4,22); ctx.lineTo(-8,16);
+    ctx.lineTo(-18,20); ctx.lineTo(-28,8);
+    ctx.lineTo(-26,-2); ctx.lineTo(-10,-8);
+    ctx.lineTo(-6,-14); ctx.closePath();
+    ctx.fillStyle = wa(col, .08); ctx.fill(); ctx.stroke();
+    // Armour banding
+    ctx.beginPath();
+    ctx.moveTo(-6,-14); ctx.lineTo(6,-14);
+    ctx.moveTo(-10,-8); ctx.lineTo(10,-8);
+    ctx.strokeStyle = wa(col, .35); ctx.lineWidth = 1.3; ctx.stroke();
+    // Triple barrel array (centre + two wings)
+    ctx.beginPath();
+    ctx.moveTo(0,-26);  ctx.lineTo(0,-36);          // centre barrel
+    ctx.moveTo(8,-24);  ctx.lineTo(14,-32);          // right barrel
+    ctx.moveTo(-8,-24); ctx.lineTo(-14,-32);         // left barrel
+    ctx.strokeStyle = wa(isPlayer ? PAL.accent : col, .9); ctx.lineWidth = 2.2; ctx.stroke();
+    // Muzzle tips
+    for (const [bx2,by2] of [[0,-36],[14,-32],[-14,-32]]) {
+      ctx.beginPath(); ctx.arc(bx2, by2, 2.8, 0, Math.PI*2);
+      ctx.fillStyle = wa(PAL.accent, .65); ctx.fill();
+    }
+    // Side fin plates
+    ctx.beginPath();
+    ctx.moveTo(26,-2); ctx.lineTo(32,0); ctx.lineTo(28,8);
+    ctx.moveTo(-26,-2); ctx.lineTo(-32,0); ctx.lineTo(-28,8);
+    ctx.strokeStyle = wa(col, .5); ctx.lineWidth = 1.1; ctx.stroke();
+  }
+
+  // Invincibility halo (player only)
   if (isPlayer && s.invincible > 0) {
-    ctx.beginPath(); ctx.arc(0, 0, 27, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2);
     ctx.strokeStyle = wa(PAL.ink, .2 + .15*Math.sin(Date.now()*.01));
     ctx.lineWidth = 1.5; ctx.stroke();
   }
+
+  // Hull class label (player only, subtle)
+  if (isPlayer) {
+    const hullNames = { skiff:'SKIFF', interceptor:'INTCPTR', gunship:'GUNSHIP', freighter:'FRTGR', dreadnought:'DREAD' };
+    ctx.font = '6px Share Tech Mono'; ctx.fillStyle = wa(PAL.ink, .25);
+    ctx.textAlign = 'center'; ctx.fillText(hullNames[hullId]||hullId, 0, 40);
+  }
+
   ctx.restore();
 }
 
@@ -1489,7 +1697,7 @@ const ST_NAMES = ['ALPHA','BETA','GAMMA','DELTA','EPSILON','VEGA','SIRIUS','LYRA
 // 'citadel'  – Megastructure Citadel: flat magnetic pads, strict speed limit
 // 'outpost'  – Modular Outpost: single glowing docking arm extending from cluster
 // 'asteroid' – Asteroid-Hollowed: internal hangar, fly through open door
-const ST_TYPES = ['torus','citadel','outpost','asteroid'];
+const ST_TYPES = ['torus','citadel','outpost','asteroid','workshop'];
 const GOODS = ['ORE','TECH','FOOD','MEDS','PARTS'];
 const GOODS_BASE = { ORE:45, TECH:220, FOOD:8, MEDS:90, PARTS:130 };
 
@@ -1555,7 +1763,7 @@ function getStation(cx, cy) {
       y:(cy + rng()*.7 + .15)*CFG.CHUNK,
       name:nm, radius:baseR, rotation:0,
       rotSpeed: stType==='torus' ? (0.18 + rng()*0.12) * (rng()<.5?1:-1)
-               : stType==='citadel' ? 0
+               : (stType==='citadel' || stType==='workshop') ? 0
                : (rng()-.5)*.4,
       // Slow orbital angular speed around the star — kept independent of the
       // (much faster) visual self-rotation so the station body doesn't whip
@@ -1669,6 +1877,15 @@ function getPadPositions(st) {
                 hint:'FLY INTO HANGAR — REDUCE SPEED [S]' }];
     }
 
+    case 'workshop': {
+      // Single magnetic landing pad on the bottom face of the gantry
+      const a = rot + Math.PI/2;
+      return [{ wx: cx + Math.cos(a)*r*0.75,
+                wy: cy + Math.sin(a)*r*0.75,
+                mechanic:'pad',
+                hint:'APPROACH SHIPYARD LANDING PAD [E]' }];
+    }
+
     default: {
       const padDist = r * 0.55;
       return (st.platforms || []).map(p => {
@@ -1710,6 +1927,7 @@ function getDockThresholds(st) {
     case 'citadel':  return { r: CFG.DOCK_PAD_R,       maxSpd: 12 }; // tight speed control
     case 'outpost':  return { r: CFG.DOCK_PAD_R * 1.2, maxSpd: 25 }; // flexible arm
     case 'asteroid': return { r: st.radius * 0.55,     maxSpd: 30 }; // just be inside hangar
+    case 'workshop': return { r: CFG.DOCK_PAD_R * 1.2, maxSpd: 18 }; // steady approach to gantry pad
     default:         return { r: CFG.DOCK_PAD_R,       maxSpd: CFG.DOCK_MAX_SPD };
   }
 }
@@ -1737,6 +1955,9 @@ function tryDock() {
     const distToCore = Math.hypot(ship.x - cx, ship.y - cy);
     if (distToCore > st.radius * 0.6) { addLog('Asteroid: Fly through the hangar door into the interior'); return; }
     if (shipSpd > dockSpd)            { addLog('Asteroid Hangar: Reduce speed inside the hangar'); return; }
+  } else if (st.stationType === 'workshop') {
+    if (padD > dockR)    { addLog('Workshop: Align with the landing pad on the gantry'); return; }
+    if (shipSpd > dockSpd){ addLog('Workshop: Reduce speed for magnetic clamps to engage'); return; }
   } else {
     // Legacy / home station
     if (padD > CFG.DOCK_PAD_R)      { addLog('Not aligned with any docking pad'); return; }
@@ -1753,6 +1974,10 @@ function tryDock() {
   updateFuelLabel(st); updateRepairLabel(st); updateShieldLabel();
   checkContractDelivery(st);
   buildContractPanel(st);
+
+  const isWorkshop = st.stationType === 'workshop';
+  document.getElementById('workshop-panel').style.display = isWorkshop ? 'block' : 'none';
+  if (isWorkshop) buildWorkshopPanel();
 
   document.getElementById('bounty-area').style.display = st.isBounty ? 'block' : 'none';
   if (st.isBounty) {
@@ -2109,6 +2334,71 @@ function drawStationAsteroid(st, scx, scy, stRot) {
   ctx.restore();
 }
 
+// ── Type 4: Workshop / Shipyard ──────────────────────────────────────────────
+function drawStationWorkshop(st, scx, scy, stRot) {
+  const r = st.radius;
+  const now = Date.now() * 0.001;
+
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+
+  // Main square gantry frame
+  ctx.beginPath(); ctx.rect(-r*0.75, -r*0.75, r*1.5, r*1.5);
+  ctx.fillStyle = wa(PAL.ink, .05); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Inner frame (depth)
+  ctx.beginPath(); ctx.rect(-r*0.5, -r*0.5, r*1.0, r*1.0);
+  ctx.strokeStyle = wa(PAL.ink, .35); ctx.lineWidth = 1; ctx.setLineDash([4,5]); ctx.stroke(); ctx.setLineDash([]);
+
+  // Corner gantry struts
+  for (let cx2 = -1; cx2 <= 1; cx2 += 2) {
+    for (let cy2 = -1; cy2 <= 1; cy2 += 2) {
+      ctx.beginPath();
+      ctx.moveTo(cx2*r*0.75, cy2*r*0.75);
+      ctx.lineTo(cx2*r*0.5,  cy2*r*0.5);
+      ctx.strokeStyle = wa(PAL.ink, .6); ctx.lineWidth = 1.4; ctx.stroke();
+      // Corner node
+      ctx.beginPath(); ctx.arc(cx2*r*0.75, cy2*r*0.75, r*0.05, 0, Math.PI*2);
+      ctx.fillStyle = wa(PAL.ink, .7); ctx.fill();
+    }
+  }
+
+  // Central bay (open construction cradle holding a ship silhouette)
+  ctx.beginPath(); ctx.rect(-r*0.32, -r*0.45, r*0.64, r*0.9);
+  ctx.fillStyle = wa(PAL.accent, .06); ctx.fill();
+  ctx.strokeStyle = wa(PAL.accent, .55); ctx.lineWidth = 1.3; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+
+  // Ship silhouette in the cradle (small triangle)
+  ctx.save(); ctx.rotate(now*0.3);
+  ctx.beginPath();
+  ctx.moveTo(0, -r*0.22); ctx.lineTo(r*0.13, r*0.16); ctx.lineTo(-r*0.13, r*0.16);
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .12); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.restore();
+
+  // Cross-brace welding sparks (pulsing)
+  const sparkPulse = 0.4 + 0.6*Math.abs(Math.sin(now*5));
+  ctx.beginPath(); ctx.arc(r*0.32, -r*0.45, r*0.025, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.warn, sparkPulse); ctx.fill();
+  ctx.beginPath(); ctx.arc(-r*0.32, r*0.45, r*0.025, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.warn, 1-sparkPulse); ctx.fill();
+
+  // Magnetic landing pad on the bottom face
+  const padPulse = 0.5 + 0.5*Math.abs(Math.sin(now*1.6));
+  ctx.beginPath(); ctx.rect(-r*0.22, r*0.75 - r*0.06, r*0.44, r*0.12);
+  ctx.fillStyle = wa(PAL.safe, .1*padPulse); ctx.fill();
+  ctx.strokeStyle = wa(PAL.safe, .8*padPulse); ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = `bold ${Math.max(6,r*0.08)}px Orbitron`; ctx.fillStyle = wa(PAL.safe, .9); ctx.textAlign='center';
+  ctx.fillText('DOCK', 0, r*0.75 + r*0.03);
+
+  // "WORKSHOP" sign on top edge
+  ctx.font = `700 ${Math.max(6,r*0.09)}px Orbitron`; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
+  ctx.fillText('WORKSHOP', 0, -r*0.75 - r*0.08);
+
+  ctx.restore();
+}
+
 // ── Master drawStation dispatcher ────────────────────────────────────────────
 function drawStation(st) {
   if (!st) return;
@@ -2145,6 +2435,7 @@ function drawStation(st) {
   else if (!st.isHome && type === 'citadel')  { drawStationCitadel(st, scx, scy, stRot); }
   else if (!st.isHome && type === 'outpost')  { drawStationOutpost(st, scx, scy, stRot); }
   else if (!st.isHome && type === 'asteroid') { drawStationAsteroid(st, scx, scy, stRot); }
+  else if (!st.isHome && type === 'workshop') { drawStationWorkshop(st, scx, scy, stRot); }
   else {
     // Original home station / legacy rendering
     ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
@@ -2378,7 +2669,7 @@ window.doBuy = function(g) {
   const d = st.inv[g];
   if (d.qty <= 0)                    { showMsg('OUT OF STOCK');           return; }
   if (ship.credits < d.price)        { showMsg('INSUFFICIENT CREDITS');   return; }
-  if (cargoTotal() >= ship.cargoMax) { showMsg('HOLD FULL');              return; }
+  if (cargoTotal() >= effCargoMax())  { showMsg('HOLD FULL');              return; }
   ship.credits -= d.price; d.qty--;
   ship.cargo[g] = (ship.cargo[g]||0) + 1;
   buildRows(st); updateHUD();
@@ -2392,6 +2683,118 @@ window.doSell = function(g) {
   ship.credits += p; st.inv[g].qty++;
   ship.cargo[g]--; if (!ship.cargo[g]) delete ship.cargo[g];
   buildRows(st); updateHUD();
+};
+
+// ── Workshop / Shipyard panel ────────────────────────────────────────────────
+
+function buildWorkshopPanel() {
+  buildHullList();
+  buildUpgradeList();
+}
+
+function buildHullList() {
+  const c = document.getElementById('hull-list'); c.innerHTML = '';
+  const weaponLabels = {
+    skiff:       'SINGLE LASER · std rate',
+    interceptor: 'RAPID LASER   · fast cooldown · −10% dmg',
+    gunship:     'DUAL CANNONS  · twin wing mounts · ×2 beams',
+    freighter:   'HEAVY CANNON  · slow · ×2.5 dmg per hit',
+    dreadnought: 'TRIPLE SPREAD · 3-beam fan · long range',
+  };
+  for (const h of SHIP_HULLS) {
+    const isOwned = ship.hullId === h.id;
+    const card = document.createElement('div');
+    card.className = 'hullcard' + (isOwned ? ' owned' : '');
+    const cargoDisp = Math.round(h.cargoMax);
+    const priceLabel = isOwned ? 'OWNED' : (h.cost.toLocaleString() + ' CR');
+    const wLabel = weaponLabels[h.id] || '';
+    card.innerHTML = `
+      <div class="hname">${h.name}${isOwned ? ' · CURRENT SHIP' : ''}<span class="hprice">${priceLabel}</span></div>
+      <div class="hdesc">${h.desc}</div>
+      <div class="hstats">WEAPON DMG ${h.weaponDmg} &nbsp; STEERING ×${h.steerMult.toFixed(2)} &nbsp; CARGO ${cargoDisp}</div>
+      <div class="hdesc" style="color:var(--accent);margin-top:2px">⚡ ${wLabel}</div>
+      ${isOwned ? '' : `<button class="tbtn" onclick="doBuyHull('${h.id}')">PURCHASE &amp; SWITCH</button>`}
+    `;
+    c.appendChild(card);
+  }
+}
+
+const UPGRADE_TRACKS = [
+  { key:'upgWeapon', label:'WEAPON',   step: CFG.UPG_WEAPON_STEP, unit:'+DMG' },
+  { key:'upgArmor',  label:'ARMOR',    step: Math.round(CFG.UPG_ARMOR_STEP*100), unit:'% RED.' },
+  { key:'upgSteer',  label:'STEERING', step: Math.round(CFG.UPG_STEER_STEP*100), unit:'% SPD/TURN' },
+  { key:'upgCargo',  label:'CARGO',    step: CFG.UPG_CARGO_STEP,  unit:'+CAP' },
+];
+
+function buildUpgradeList() {
+  const c = document.getElementById('upgrade-list'); c.innerHTML = '';
+  for (const t of UPGRADE_TRACKS) {
+    const lvl = ship[t.key];
+    const maxed = lvl >= CFG.UPGRADE_MAX_LVL;
+    const cost = maxed ? null : upgradeCost(lvl);
+    const row = document.createElement('div'); row.className = 'upgrow';
+
+    let dots = '';
+    for (let i = 0; i < CFG.UPGRADE_MAX_LVL; i++) {
+      dots += `<div class="updot${i < lvl ? ' filled' : ''}"></div>`;
+    }
+
+    const bonusLabel = `LV ${lvl}/${CFG.UPGRADE_MAX_LVL} · NEXT ${t.step}${t.unit}`;
+    row.innerHTML = `
+      <span class="ulabel">${t.label}</span>
+      <div class="upgdots">${dots}</div>
+      <span class="ucost">${maxed ? 'MAXED' : bonusLabel}</span>
+      ${maxed ? '<span></span>' : `<button class="tbtn" onclick="doBuyUpgrade('${t.key}')">${cost.toLocaleString()} CR</button>`}
+    `;
+    c.appendChild(row);
+  }
+}
+
+window.doBuyHull = function(hullId) {
+  const h = SHIP_HULLS.find(x => x.id === hullId);
+  if (!h) return;
+  if (ship.hullId === hullId) { showMsg('ALREADY OWNED'); return; }
+  if (ship.credits < h.cost)   { showMsg('INSUFFICIENT CREDITS'); return; }
+
+  ship.credits -= h.cost;
+  ship.hullId    = h.id;
+  ship.weaponDmg = h.weaponDmg;
+  ship.steerMult = h.steerMult;
+  ship.cargoMax  = h.cargoMax;
+  // New hull, new fitting — upgrade levels reset for the fresh frame
+  ship.upgWeapon = 0; ship.upgArmor = 0; ship.upgSteer = 0; ship.upgCargo = 0;
+
+  applySpeedModeStats();
+  // If new cargo capacity is smaller than current cargo, jettison overflow
+  let overflow = cargoTotal() - effCargoMax();
+  if (overflow > 0) {
+    for (const g of Object.keys(ship.cargo)) {
+      if (overflow <= 0) break;
+      const drop = Math.min(ship.cargo[g], overflow);
+      ship.cargo[g] -= drop; overflow -= drop;
+      if (!ship.cargo[g]) delete ship.cargo[g];
+    }
+    addLog('Cargo overflow jettisoned to fit new hold');
+  }
+
+  addLog('Purchased ' + h.name + ' · ' + h.cost.toLocaleString() + ' CR');
+  showEventBanner('NEW SHIP', h.name + ' ACQUIRED');
+  buildWorkshopPanel(); updateHUD();
+};
+
+window.doBuyUpgrade = function(key) {
+  const lvl = ship[key];
+  if (lvl >= CFG.UPGRADE_MAX_LVL) { showMsg('UPGRADE MAXED'); return; }
+  const cost = upgradeCost(lvl);
+  if (ship.credits < cost) { showMsg('INSUFFICIENT CREDITS'); return; }
+
+  ship.credits -= cost;
+  ship[key]++;
+  if (key === 'upgSteer') applySpeedModeStats();
+
+  const track = UPGRADE_TRACKS.find(t => t.key === key);
+  addLog(track.label + ' upgraded to LV ' + ship[key] + ' · -' + cost.toLocaleString() + ' CR');
+  buildWorkshopPanel(); updateHUD();
 };
 
 function updateFuelLabel(st) {
@@ -2478,7 +2881,7 @@ const DROP_CAP = 150;
 
 function collectDrop(d) {
   d.ttl = -1;
-  const space = ship.cargoMax - cargoTotal();
+  const space = effCargoMax() - cargoTotal();
   const take  = Math.min(d.qty, space);
   if (take <= 0) { addLog('Hold full!'); return; }
   ship.cargo[d.good] = (ship.cargo[d.good]||0) + take;
@@ -2567,13 +2970,13 @@ function updateEnemies(dt) {
       const nose  = 18, len2 = 540;
       e.laserBeam = { x1:e.x+Math.sin(fa)*nose, y1:e.y-Math.cos(fa)*nose, x2:e.x+Math.sin(fa)*(nose+len2), y2:e.y-Math.cos(fa)*(nose+len2), ttl:.12 };
       if (!ship.shieldActive && ship.invincible <= 0 && lineCircle(e.laserBeam.x1,e.laserBeam.y1,e.laserBeam.x2,e.laserBeam.y2,ship.x,ship.y,16)) {
-        ship.hull = Math.max(0, ship.hull-10); addLog('Hull hit! ' + Math.floor(ship.hull) + '%'); if (ship.hull <= 0) killShip();
+        applyHullDamage(10); addLog('Hull hit! ' + Math.floor(ship.hull) + '%'); if (ship.hull <= 0) killShip();
       }
     }
     if (e.laserBeam) { e.laserBeam.ttl -= dt; if (e.laserBeam.ttl <= 0) e.laserBeam = null; }
 
     if (!pSafe && dist < 24 && ship.invincible <= 0) {
-      ship.hull = Math.max(0, ship.hull-10); e.hull -= 50;
+      applyHullDamage(10); e.hull -= 50;
       if (e.hull <= 0) killEnemy(e); if (ship.hull <= 0) killShip();
     }
   }
@@ -2597,43 +3000,105 @@ function drawEnemies() {
 
 // ── ## LASER ─────────────────────────────────────────────────────────────────
 
+// Hull-specific weapon parameters
+const HULL_WEAPON_CFG = {
+  // id        : { beams, cdMult, heatMult, energyMult, lenMult, dmgMult, style }
+  skiff        : { beams:[{ox:0,  oy:0,   spread:0}],                           cdMult:1.00, heatMult:1.0, energyMult:1.0, lenMult:1.0, dmgMult:1.0,  style:'single' },
+  interceptor  : { beams:[{ox:0,  oy:0,   spread:0}],                           cdMult:0.55, heatMult:0.7, energyMult:0.8, lenMult:1.1, dmgMult:0.9,  style:'rapid'  },
+  gunship      : { beams:[{ox:14, oy:12,  spread:0},{ox:-14, oy:12, spread:0}], cdMult:1.10, heatMult:1.2, energyMult:1.2, lenMult:1.0, dmgMult:1.0,  style:'dual'   },
+  freighter    : { beams:[{ox:0,  oy:-18, spread:0}],                           cdMult:2.20, heatMult:0.7, energyMult:0.6, lenMult:0.8, dmgMult:2.5,  style:'heavy'  },
+  dreadnought  : { beams:[{ox:0,  oy:0,   spread:0},{ox:0, oy:0, spread:-0.12},{ox:0, oy:0, spread:0.12}], cdMult:1.35, heatMult:1.3, energyMult:1.3, lenMult:1.2, dmgMult:1.0, style:'spread' },
+};
+
 function fireLaser() {
   if (ship.laserCooldown > 0 || ship.heat >= 100 || ship.energy < CFG.LASER_ENERGY || modalOpen()) return;
-  ship.laserCooldown = CFG.LASER_CD;
-  ship.heat   = Math.min(100, ship.heat   + CFG.LASER_HEAT);
-  ship.energy = Math.max(0,   ship.energy - CFG.LASER_ENERGY);
 
-  const nose = 20;
-  const bx1 = ship.x + Math.sin(ship.angle)*nose;
-  const by1 = ship.y - Math.cos(ship.angle)*nose;
-  const bx2 = ship.x + Math.sin(ship.angle)*(nose + CFG.LASER_LEN);
-  const by2 = ship.y - Math.cos(ship.angle)*(nose + CFG.LASER_LEN);
-  ship.laserBeam = { x1:bx1, y1:by1, x2:bx2, y2:by2, ttl:.15 };
+  const wcfg = HULL_WEAPON_CFG[ship.hullId] || HULL_WEAPON_CFG.skiff;
+  ship.laserCooldown = CFG.LASER_CD * wcfg.cdMult;
+  ship.heat   = Math.min(100, ship.heat   + CFG.LASER_HEAT   * wcfg.heatMult);
+  ship.energy = Math.max(0,   ship.energy - CFG.LASER_ENERGY * wcfg.energyMult);
 
-  for (const e of enemies)  { if (e.dead) continue; if (lineCircle(bx1,by1,bx2,by2,e.x,e.y,16)) { e.hull -= 35; if (e.hull<=0) killEnemy(e); } }
-  for (const m of meteors)  { if (m.dead) continue; if (lineCircle(bx1,by1,bx2,by2,m.x,m.y,m.r)) splitMeteor(m); }
-  if (activeBoss && !activeBoss.dead) {
-    if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,14)) hitBoss(20);
-    else if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,activeBoss.radius)) hitBoss(10);
-  }
-  for (const s of stranded) {
-    if (s.helped || s.looted) continue;
-    if (lineCircle(bx1,by1,bx2,by2,s.x,s.y,16)) {
-      s.looted = true; changeKarma(-10, 'Attacked stranded');
-      for (let i = 0; i < 3; i++) drops.push({ x:s.x+(Math.random()-.5)*60, y:s.y+(Math.random()-.5)*60, good:GOODS[Math.floor(Math.random()*GOODS.length)], qty:Math.floor(Math.random()*4+2), ttl:2500, isSignal:false });
+  const laserLen = CFG.LASER_LEN * wcfg.lenMult;
+  const dmg = effWeaponDmg() * wcfg.dmgMult;
+  const beams = [];
+
+  for (const bd of wcfg.beams) {
+    // Wing-offset beam origins (perpendicular to ship angle)
+    const perp = ship.angle + Math.PI/2;
+    const ox = Math.cos(perp) * bd.ox + Math.sin(ship.angle) * (-bd.oy);
+    const oy = Math.sin(perp) * bd.ox - Math.cos(ship.angle) * (-bd.oy);
+    const fireAngle = ship.angle + bd.spread;
+    const bx1 = ship.x + ox + Math.sin(fireAngle)*20;
+    const by1 = ship.y + oy - Math.cos(fireAngle)*20;
+    const bx2 = ship.x + ox + Math.sin(fireAngle)*(20 + laserLen);
+    const by2 = ship.y + oy - Math.cos(fireAngle)*(20 + laserLen);
+    beams.push({ x1:bx1, y1:by1, x2:bx2, y2:by2 });
+
+    // Damage checks per beam
+    for (const e of enemies) {
+      if (e.dead) continue;
+      if (lineCircle(bx1,by1,bx2,by2,e.x,e.y,16)) { e.hull -= dmg; if (e.hull<=0) killEnemy(e); }
+    }
+    for (const m of meteors) {
+      if (m.dead) continue;
+      if (lineCircle(bx1,by1,bx2,by2,m.x,m.y,m.r)) splitMeteor(m);
+    }
+    if (activeBoss && !activeBoss.dead) {
+      const dmgMult = dmg / CFG.LASER_DMG_BASE;
+      if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,14)) hitBoss(20*dmgMult);
+      else if (lineCircle(bx1,by1,bx2,by2,activeBoss.x,activeBoss.y,activeBoss.radius)) hitBoss(10*dmgMult);
+    }
+    for (const s of stranded) {
+      if (s.helped || s.looted) continue;
+      if (lineCircle(bx1,by1,bx2,by2,s.x,s.y,16)) {
+        s.looted = true; changeKarma(-10, 'Attacked stranded');
+        for (let i = 0; i < 3; i++) drops.push({ x:s.x+(Math.random()-.5)*60, y:s.y+(Math.random()-.5)*60, good:GOODS[Math.floor(Math.random()*GOODS.length)], qty:Math.floor(Math.random()*4+2), ttl:2500, isSignal:false });
+      }
     }
   }
+
+  // Store all beams for rendering (multi-beam ships show all)
+  ship.laserBeam = { beams, style: wcfg.style, ttl: wcfg.style === 'heavy' ? 0.28 : 0.15 };
 }
 
 function drawLaser() {
   if (!ship.laserBeam) return;
-  const age   = 1 - (ship.laserBeam.ttl / .15);
-  const alpha = 1 - age*.7;
-  const x1 = wx(ship.laserBeam.x1), y1 = wy(ship.laserBeam.y1);
-  const x2 = wx(ship.laserBeam.x2), y2 = wy(ship.laserBeam.y2);
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.08); ctx.lineWidth = 14; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.35); ctx.lineWidth = 4;  ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = 1.2; ctx.stroke();
+  const lb = ship.laserBeam;
+  const age   = 1 - (lb.ttl / (lb.style === 'heavy' ? 0.28 : 0.15));
+  const alpha = 1 - age * .7;
+  const beams = lb.beams || [lb]; // back-compat
+
+  for (const b of beams) {
+    const x1 = wx(b.x1), y1 = wy(b.y1);
+    const x2 = wx(b.x2), y2 = wy(b.y2);
+
+    if (lb.style === 'heavy') {
+      // Freighter: fat slow-pulse beam
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.15); ctx.lineWidth = 28; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.accent, alpha*.5); ctx.lineWidth = 8;  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.9); ctx.lineWidth = 2.2; ctx.stroke();
+    } else if (lb.style === 'rapid') {
+      // Interceptor: thin needle beam
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.06); ctx.lineWidth = 6;  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.accent, alpha*.6); ctx.lineWidth = 2;  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = .7; ctx.stroke();
+    } else if (lb.style === 'dual') {
+      // Gunship: standard weight per barrel
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.08); ctx.lineWidth = 12; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.35); ctx.lineWidth = 3.5; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = 1.1; ctx.stroke();
+    } else if (lb.style === 'spread') {
+      // Dreadnought: each beam slightly thinner (3 of them)
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.07); ctx.lineWidth = 10; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.accent, alpha*.4); ctx.lineWidth = 3;  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = 1.0; ctx.stroke();
+    } else {
+      // Default (skiff)
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.08); ctx.lineWidth = 14; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha*.35); ctx.lineWidth = 4;  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.strokeStyle = wa(PAL.ink, alpha);     ctx.lineWidth = 1.2; ctx.stroke();
+    }
+  }
 }
 
 
@@ -2677,7 +3142,7 @@ function updateMeteors(dt) {
     if (Math.hypot(m.x-ship.x, m.y-ship.y) > 3000) { m.dead = true; continue; }
     m.x += m.vx*dt; m.y += m.vy*dt; m.rotation += m.rotSpeed*dt;
     if (ship.invincible <= 0 && !ship.shieldActive && Math.hypot(m.x-ship.x, m.y-ship.y) < m.r+14) {
-      const dmg = 10 + Math.floor(m.r*.8); ship.hull = Math.max(0, ship.hull-dmg); addLog('Meteor impact! -' + dmg + ' hull');
+      const dmg = 10 + Math.floor(m.r*.8); applyHullDamage(dmg); addLog('Meteor impact! -' + dmg + ' hull');
       const dx=ship.x-m.x, dy=ship.y-m.y, d=Math.hypot(dx,dy)||1;
       ship.vx+=(dx/d)*120; ship.vy+=(dy/d)*120; ship.invincible=1.2;
       splitMeteor(m); if (ship.hull <= 0) killShip();
@@ -2720,7 +3185,7 @@ function updateBlackHoles(dt) {
       ship.vx += (dx/dist)*pull*500*dt; ship.vy += (dy/dist)*pull*500*dt;
     }
     if (dist < CFG.BH_ESC && ship.invincible <= 0) {
-      ship.hull = Math.max(0, ship.hull-30); ship.invincible = 2;
+      applyHullDamage(30); ship.invincible = 2;
       const ta = Math.random()*Math.PI*2;
       ship.x = Math.cos(ta)*2000; ship.y = Math.sin(ta)*2000;
       ship.vx=0; ship.vy=0; ship.hull=Math.max(15,ship.hull*.4); ship.fuel=Math.max(10,ship.fuel*.7); ship.invincible=4;
@@ -2786,7 +3251,7 @@ function updateSwarms(dt) {
       if (ship.invincible<=0 && !ship.shieldActive) {
         for (const r of s.rocks) {
           if (Math.hypot(s.cx+r.ox-ship.x, s.cy+r.oy-ship.y) < r.r+14) {
-            const dmg=40+Math.floor(r.r); ship.hull=Math.max(0,ship.hull-dmg); addLog('SWARM IMPACT! -'+dmg+' hull');
+            const dmg=40+Math.floor(r.r); applyHullDamage(dmg); addLog('SWARM IMPACT! -'+dmg+' hull');
             ship.invincible=.6; if (ship.hull<=0) { killShip(); return; }
           }
         }
@@ -3003,13 +3468,13 @@ function updateBoss(dt) {
     b.attackTimer=0; const pc=b.phase===3?3:b.phase===2?2:1;
     for (let i=0;i<pc;i++) { const spread=(i-(pc-1)/2)*.15; bossProj.push({x:b.x,y:b.y,vx:Math.sin(b.angle+spread)*350,vy:-Math.cos(b.angle+spread)*350,ttl:3.5}); }
   }
-  if (dist < b.radius+14 && ship.invincible<=0 && !ship.shieldActive) { ship.hull=Math.max(0,ship.hull-25); addLog('Boss ram! -25 hull'); ship.invincible=1; if (ship.hull<=0) killShip(); }
+  if (dist < b.radius+14 && ship.invincible<=0 && !ship.shieldActive) { applyHullDamage(25); addLog('Boss ram! -25 hull'); ship.invincible=1; if (ship.hull<=0) killShip(); }
 }
 
 function updateBossProj(dt) {
   for (const p of bossProj) {
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.ttl-=dt; if (p.ttl<=0) continue;
-    if (ship.invincible<=0 && !ship.shieldActive && Math.hypot(p.x-ship.x,p.y-ship.y)<14) { ship.hull=Math.max(0,ship.hull-18); addLog('Projectile hit! -18 hull'); p.ttl=0; if (ship.hull<=0) killShip(); }
+    if (ship.invincible<=0 && !ship.shieldActive && Math.hypot(p.x-ship.x,p.y-ship.y)<14) { applyHullDamage(18); addLog('Projectile hit! -18 hull'); p.ttl=0; if (ship.hull<=0) killShip(); }
   }
   for (let i=bossProj.length-1;i>=0;i--) if (bossProj[i].ttl<=0) bossProj.splice(i,1);
 }
@@ -3172,6 +3637,13 @@ function drawMinimap() {
       mmx.lineTo(bx, by+sz*.8);
       mmx.lineTo(bx-sz*.55, by);
       mmx.closePath(); mmx.stroke();
+    } else if (type === 'workshop') {
+      // Square with crossed corners (gantry/wrench motif)
+      mmx.beginPath(); mmx.rect(bx-sz*.7, by-sz*.7, sz*1.4, sz*1.4); mmx.stroke();
+      mmx.beginPath();
+      mmx.moveTo(bx-sz*.7, by-sz*.7); mmx.lineTo(bx+sz*.7, by+sz*.7);
+      mmx.moveTo(bx+sz*.7, by-sz*.7); mmx.lineTo(bx-sz*.7, by+sz*.7);
+      mmx.stroke();
     }
 
     if (isFS && mmZoom>.6) {
@@ -3233,6 +3705,9 @@ function updateHUD() {
   document.getElementById('bar-hull').className    = 'bfill' + (ship.hull<25?' danger':ship.hull<50?' warn':'');
   document.getElementById('bar-heat').className    = 'bfill' + (ship.heat>80?' danger':ship.heat>50?' warn':'');
   document.getElementById('hud-laser').textContent = ship.heat>=100?'OVERHEAT':ship.laserCooldown>0?'CHARGE':'READY';
+  const hullDisplayNames = { skiff:'VOID SKIFF', interceptor:'INTERCEPTOR', gunship:'GUNSHIP', freighter:'HEAVY FREIGHTER', dreadnought:'DREADNOUGHT' };
+  const classEl = document.getElementById('hud-class');
+  if (classEl) classEl.textContent = hullDisplayNames[ship.hullId] || ship.hullId.toUpperCase();
   const shEl = document.getElementById('hud-shield');
   shEl.textContent = !ship.hasShield?'NONE':ship.shieldActive?'ACTIVE':'READY [Q]';
   shEl.className   = 'val' + (ship.shieldActive?' ok':'');
@@ -3244,6 +3719,7 @@ function updateHUD() {
   document.getElementById('hud-karma').textContent = (karma>=0?'+':'') + karma;
   document.getElementById('hud-cr').textContent    = ship.credits.toLocaleString();
   document.getElementById('hud-cu').textContent    = cargoTotal();
+  document.getElementById('hud-cu-max').textContent= effCargoMax();
   const list = Object.entries(ship.cargo).filter(([,q])=>q>0);
   document.getElementById('cargo-list').innerHTML  = list.length ? list.map(([g,q])=>`${q}× ${g}`).join('<br>') : '── EMPTY ──';
 }
@@ -3313,6 +3789,8 @@ function saveGame() {
     x:ship.x, y:ship.y, vx:ship.vx, vy:ship.vy, angle:ship.angle,
     fuel:ship.fuel, hull:ship.hull, credits:ship.credits,
     kills:ship.kills, cargo:ship.cargo, hasShield:ship.hasShield,
+    hullId:ship.hullId, weaponDmg:ship.weaponDmg, steerMult:ship.steerMult, cargoMax:ship.cargoMax,
+    upgWeapon:ship.upgWeapon, upgArmor:ship.upgArmor, upgSteer:ship.upgSteer, upgCargo:ship.upgCargo,
     karma, seed:SEED, contractsDone,
     discovered: Array.from(discovered),
   }));
@@ -3323,6 +3801,15 @@ function loadGame() {
   try {
     const s=JSON.parse(raw); if (s.seed !== SEED) return;
     Object.assign(ship, { x:s.x, y:s.y, vx:s.vx||0, vy:s.vy||0, angle:s.angle||0, fuel:s.fuel, hull:s.hull, credits:s.credits, kills:s.kills||0, cargo:s.cargo||{}, hasShield:s.hasShield||false });
+    if (s.hullId) {
+      ship.hullId    = s.hullId;
+      ship.weaponDmg = s.weaponDmg || SHIP_HULLS.find(h=>h.id===s.hullId)?.weaponDmg || SHIP_HULLS[0].weaponDmg;
+      ship.steerMult = s.steerMult || SHIP_HULLS.find(h=>h.id===s.hullId)?.steerMult || 1.0;
+      ship.cargoMax  = s.cargoMax  || SHIP_HULLS.find(h=>h.id===s.hullId)?.cargoMax  || CFG.CARGO_MAX;
+      ship.upgWeapon = s.upgWeapon || 0; ship.upgArmor = s.upgArmor || 0;
+      ship.upgSteer  = s.upgSteer  || 0; ship.upgCargo = s.upgCargo || 0;
+      applySpeedModeStats();
+    }
     karma=s.karma||0; contractsDone=s.contractsDone||0;
     if (s.discovered) for (const d of s.discovered) {
       discovered.add(d);
