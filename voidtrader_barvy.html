@@ -1,28 +1,22 @@
-Here is the complete, updated HTML file for **VOIDTRADER**.
-
-I have implemented a modular `GamepadController` that handles input via the browser's Gamepad API. It features a context-aware state machine that maps controls seamlessly across three main states: **Gameplay**, **Map Mode**, and **UI/Station Mode**.
-
-A new `.gp-focus` CSS class is used to visually highlight interactive elements in the menus, and the minimap drawing logic has been updated to support panning with the Left Joystick.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VOIDTRADER · WHITE (XBOX CONTROLLER EDITION)</title>
+<title>VOIDTRADER · WHITE & DARK (XBOX CONTROLLER EDITION)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
 
 /* ═══════════════════════════════════════════════════
-   THEME — Black on warm paper (Milky Way mode)
-   Edit CSS variables here to retheme the whole game
+   THEME — Dynamic Variables
    ═══════════════════════════════════════════════════ */
 :root{
   --bg:        #f5f3ee;
+  --bg-rgb:    245, 243, 238;
   --panel:     rgba(245,243,238,0.92);
   --ink:       #000000;
+  --ink-rgb:   0, 0, 0;
   --ink2:      #333333;
   --ink3:      #777777;
   --ink4:      #bbbbbb;
@@ -42,6 +36,7 @@ body{
   user-select:none;
   -webkit-font-smoothing:antialiased;
   cursor:crosshair;
+  transition: background 0.3s, color 0.3s;
 }
 
 #canvas{display:block;position:fixed;top:0;left:0;z-index:1;}
@@ -50,7 +45,7 @@ body{
 .gp-focus {
   outline: 2px solid var(--accent) !important;
   outline-offset: -2px !important;
-  background: rgba(200, 60, 0, 0.08) !important;
+  background: rgba(var(--ink-rgb), 0.08) !important;
 }
 
 /* ── HUD panels ── */
@@ -59,19 +54,20 @@ body{
 .hp{
   position:absolute;
   background:var(--panel);
-  border:1px solid rgba(0,0,0,.14);
-  border-top:2px solid rgba(0,0,0,.5);
+  border:1px solid rgba(var(--ink-rgb),.14);
+  border-top:2px solid rgba(var(--ink-rgb),.5);
   font-family:var(--fnt2);font-size:11px;line-height:1.7;
-  letter-spacing:.06em;color:rgba(0,0,0,.7);
+  letter-spacing:.06em;color:rgba(var(--ink-rgb),.7);
   padding:10px 14px 12px;
   backdrop-filter:blur(12px);
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
 }
 .hp::before{
   content:attr(data-l);
   display:block;
   font-family:var(--fnt);font-size:8px;letter-spacing:.4em;
-  color:rgba(0,0,0,.3);
-  border-bottom:1px solid rgba(0,0,0,.1);
+  color:rgba(var(--ink-rgb),.3);
+  border-bottom:1px solid rgba(var(--ink-rgb),.1);
   margin-bottom:7px;padding-bottom:4px;
   text-transform:uppercase;
 }
@@ -82,14 +78,14 @@ body{
 #hp-log  {bottom:0;left:220px;width:290px;}
 
 /* Status bars */
-.bbar{display:inline-block;width:88px;height:3px;background:rgba(0,0,0,.1);vertical-align:middle;position:relative;overflow:hidden;}
-.bfill{position:absolute;top:0;left:0;height:100%;background:var(--ink);transition:width .25s;}
+.bbar{display:inline-block;width:88px;height:3px;background:rgba(var(--ink-rgb),.1);vertical-align:middle;position:relative;overflow:hidden;}
+.bfill{position:absolute;top:0;left:0;height:100%;background:var(--ink);transition:width .25s, background .3s;}
 .bfill.warn  {background:var(--warn);}
 .bfill.danger{background:var(--danger);animation:blink .5s ease-in-out infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
 .val{color:var(--ink);font-weight:500;}
-.dim{color:rgba(0,0,0,.4);font-size:10px;}
+.dim{color:rgba(var(--ink-rgb),.4);font-size:10px;}
 .ok {color:var(--safe);}
 .wr {color:var(--warn);}
 .er {color:var(--danger);}
@@ -102,60 +98,61 @@ body{
 #minimap{
   position:fixed;bottom:14px;right:14px;
   width:180px;height:180px;border-radius:50%;
-  border:1px solid rgba(0,0,0,.25);
-  background:rgba(245,243,238,.9);
+  border:1px solid rgba(var(--ink-rgb),.25);
+  background:rgba(var(--bg-rgb),.9);
   z-index:15;cursor:pointer;
   clip-path:circle(50%);overflow:hidden;
+  transition: background 0.3s, border-color 0.3s;
 }
 #minimap-label{
   position:fixed;bottom:200px;right:14px;width:180px;text-align:center;
   font-family:var(--fnt);font-size:8px;letter-spacing:.25em;
-  color:rgba(0,0,0,.3);z-index:16;pointer-events:none;
+  color:rgba(var(--ink-rgb),.3);z-index:16;pointer-events:none;
 }
 #minimap.fullscreen{
   top:0;left:0;right:0;bottom:0;width:100%;height:100%;
   border-radius:0;clip-path:none;border:none;z-index:80;background:var(--bg);cursor:default;
 }
-#minimap-label.fullscreen{top:14px;right:14px;left:auto;bottom:auto;width:auto;font-size:11px;color:rgba(0,0,0,.5);}
-#minimap-stats-fs{display:none;position:fixed;top:14px;left:14px;z-index:81;font-size:12px;color:rgba(0,0,0,.4);letter-spacing:.07em;font-family:var(--fnt2);}
+#minimap-label.fullscreen{top:14px;right:14px;left:auto;bottom:auto;width:auto;font-size:11px;color:rgba(var(--ink-rgb),.5);}
+#minimap-stats-fs{display:none;position:fixed;top:14px;left:14px;z-index:81;font-size:12px;color:rgba(var(--ink-rgb),.4);letter-spacing:.07em;font-family:var(--fnt2);}
 #minimap-stats-fs.visible{display:block;}
 #minimap-stats-fs p{margin-bottom:5px;}
 
 /* ── Boot screen ── */
 #boot{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;}
 #boot h1{font-family:var(--fnt);font-size:clamp(36px,6vw,72px);font-weight:900;letter-spacing:.6em;color:var(--ink);margin-bottom:4px;}
-#boot .sub{color:rgba(0,0,0,.3);font-size:10px;margin-bottom:32px;letter-spacing:.45em;font-family:var(--fnt2);}
-.bl{color:rgba(0,0,0,.45);margin:2px 0;font-size:12px;font-family:var(--fnt2);letter-spacing:.06em;}
+#boot .sub{color:rgba(var(--ink-rgb),.3);font-size:10px;margin-bottom:32px;letter-spacing:.45em;font-family:var(--fnt2);}
+.bl{color:rgba(var(--ink-rgb),.45);margin:2px 0;font-size:12px;font-family:var(--fnt2);letter-spacing:.06em;}
 .bl.ok::before {content:'◆  ';color:var(--safe);}
 .bl.w::before  {content:'◈  ';color:var(--warn);}
 #boot-start{
   margin-top:32px;background:transparent;
-  border:1px solid rgba(0,0,0,.5);color:var(--ink);
+  border:1px solid rgba(var(--ink-rgb),.5);color:var(--ink);
   font-family:var(--fnt);font-size:12px;letter-spacing:.4em;
   padding:14px 44px;cursor:pointer;
   clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);
-  transition:background .2s;
+  transition:background .2s, border-color .3s, color .3s;
 }
-#boot-start:hover{background:rgba(0,0,0,.06);}
-#boot-reset{margin-top:10px;background:transparent;border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:10px;letter-spacing:.2em;padding:7px 20px;cursor:pointer;}
-#boot-reset:hover{background:rgba(0,0,0,.04);}
+#boot-start:hover{background:rgba(var(--ink-rgb),.06);}
+#boot-reset{margin-top:10px;background:transparent;border:1px solid rgba(var(--ink-rgb),.15);color:rgba(var(--ink-rgb),.35);font-family:var(--fnt2);font-size:10px;letter-spacing:.2em;padding:7px 20px;cursor:pointer;}
+#boot-reset:hover{background:rgba(var(--ink-rgb),.04);}
 
 /* ── Contract HUD strip ── */
 #contract-hud{
   position:fixed;top:46px;left:50%;transform:translateX(-50%);
-  background:var(--panel);border:1px solid rgba(0,0,0,.14);border-top:none;
+  background:var(--panel);border:1px solid rgba(var(--ink-rgb),.14);border-top:none;
   font-family:var(--fnt2);font-size:11px;
   padding:8px 20px 10px;z-index:11;pointer-events:none;
   display:none;text-align:center;
 }
-#contract-hud .ct{font-family:var(--fnt);font-size:8px;letter-spacing:.4em;color:rgba(0,0,0,.3);margin-bottom:3px;}
+#contract-hud .ct{font-family:var(--fnt);font-size:8px;letter-spacing:.4em;color:rgba(var(--ink-rgb),.3);margin-bottom:3px;}
 #contract-hud .cc{color:var(--ink);letter-spacing:.12em;}
-#contract-hud .cd{color:rgba(0,0,0,.5);font-size:10px;margin-top:2px;}
+#contract-hud .cd{color:rgba(var(--ink-rgb),.5);font-size:10px;margin-top:2px;}
 
 /* ── Modals ── */
 #trade-modal,#distress-modal,#stranded-modal{
   display:none;position:fixed;inset:0;
-  background:rgba(245,243,238,.92);z-index:110;
+  background:rgba(var(--bg-rgb),.92);z-index:110;
   align-items:center;justify-content:center;
   backdrop-filter:blur(14px);
 }
@@ -165,73 +162,92 @@ body{
 
 /* Trade box */
 #trade-box{
-  border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--ink);
+  border:1px solid rgba(var(--ink-rgb),.2);border-top:2px solid var(--ink);
   background:var(--bg);width:600px;max-height:90vh;overflow-y:auto;padding:24px;
-  font-family:var(--fnt2);font-size:12px;color:rgba(0,0,0,.65);
+  font-family:var(--fnt2);font-size:12px;color:rgba(var(--ink-rgb),.65);
   pointer-events:all;
   clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
+  transition: background 0.3s, border-color 0.3s;
 }
 #trade-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--ink);margin-bottom:16px;font-weight:500;}
 .trow{display:grid;grid-template-columns:110px 50px 70px 70px 50px 120px;gap:6px;align-items:center;margin-bottom:4px;font-size:11px;}
-.trow.th{color:rgba(0,0,0,.3);font-size:9px;letter-spacing:.2em;border-bottom:1px solid rgba(0,0,0,.1);padding-bottom:5px;margin-bottom:8px;font-family:var(--fnt);}
+.trow.th{color:rgba(var(--ink-rgb),.3);font-size:9px;letter-spacing:.2em;border-bottom:1px solid rgba(var(--ink-rgb),.1);padding-bottom:5px;margin-bottom:8px;font-family:var(--fnt);}
 .tbtn{
-  border:1px solid rgba(0,0,0,.22);background:transparent;color:var(--ink);
+  border:1px solid rgba(var(--ink-rgb),.22);background:transparent;color:var(--ink);
   font-family:var(--fnt2);font-size:10px;padding:4px 8px;cursor:pointer;
   clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
-  letter-spacing:.1em;transition:background .15s;
+  letter-spacing:.1em;transition:background .15s, color .3s, border-color .3s;
 }
-.tbtn:hover{background:rgba(0,0,0,.08);}
-.tbtn.sell{border-color:rgba(160,60,0,.4);color:var(--accent);}
-.tbtn.sell:hover{background:rgba(160,60,0,.06);}
+.tbtn:hover{background:rgba(var(--ink-rgb),.08);}
+.tbtn.sell{border-color:var(--accent);color:var(--accent); opacity: 0.8;}
+.tbtn.sell:hover{background:rgba(var(--ink-rgb),.06); opacity: 1;}
 .tactions{display:flex;gap:4px;}.tactions .tbtn{flex:1;}
-#trade-close{margin-top:16px;width:100%;border:1px solid rgba(0,0,0,.12);background:transparent;color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
-#trade-close:hover{background:rgba(0,0,0,.04);}
+#trade-close{margin-top:16px;width:100%;border:1px solid rgba(var(--ink-rgb),.12);background:transparent;color:rgba(var(--ink-rgb),.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#trade-close:hover{background:rgba(var(--ink-rgb),.04);}
 
 /* Contract panel inside trade */
-#contract-panel{border-top:1px solid rgba(0,0,0,.08);margin-top:12px;padding-top:12px;}
-#contract-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:rgba(0,0,0,.3);margin-bottom:10px;}
-.cjob{border:1px solid rgba(0,0,0,.12);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;}
-.cjob:hover{border-color:rgba(0,0,0,.4);background:rgba(0,0,0,.03);}
-.cjob.active{border-color:var(--ink);background:rgba(0,0,0,.05);}
+#contract-panel{border-top:1px solid rgba(var(--ink-rgb),.08);margin-top:12px;padding-top:12px;}
+#contract-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:rgba(var(--ink-rgb),.3);margin-bottom:10px;}
+.cjob{border:1px solid rgba(var(--ink-rgb),.12);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;}
+.cjob:hover{border-color:rgba(var(--ink-rgb),.4);background:rgba(var(--ink-rgb),.03);}
+.cjob.active{border-color:var(--ink);background:rgba(var(--ink-rgb),.05);}
 .cjob .cname{color:var(--ink);font-size:11px;letter-spacing:.1em;margin-bottom:4px;}
-.cjob .cinfo{color:rgba(0,0,0,.45);font-size:10px;line-height:1.6;}
+.cjob .cinfo{color:rgba(var(--ink-rgb),.45);font-size:10px;line-height:1.6;}
 .cjob .crew{color:var(--accent);font-size:11px;font-weight:500;float:right;margin-top:-20px;}
 
 /* Distress box */
-#distress-box{border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--warn);background:var(--bg);width:400px;padding:24px;text-align:center;font-family:var(--fnt2);pointer-events:all;}
+#distress-box{border:1px solid rgba(var(--ink-rgb),.2);border-top:2px solid var(--warn);background:var(--bg);width:400px;padding:24px;text-align:center;font-family:var(--fnt2);pointer-events:all;}
 #distress-box h2{color:var(--warn);font-family:var(--fnt);font-size:14px;letter-spacing:.3em;margin-bottom:10px;}
-#distress-box p{font-size:11px;margin-bottom:16px;line-height:1.7;color:rgba(0,0,0,.6);}
-.dbtn{border:1px solid rgba(0,0,0,.2);background:transparent;color:var(--warn);font-family:var(--fnt2);font-size:12px;padding:9px 22px;cursor:pointer;letter-spacing:.15em;margin:4px;}
-.dbtn:hover{background:rgba(0,0,0,.04);}
-.dbtn.er{border-color:rgba(160,0,0,.35);color:var(--danger);}
+#distress-box p{font-size:11px;margin-bottom:16px;line-height:1.7;color:rgba(var(--ink-rgb),.6);}
+.dbtn{border:1px solid rgba(var(--ink-rgb),.2);background:transparent;color:var(--warn);font-family:var(--fnt2);font-size:12px;padding:9px 22px;cursor:pointer;letter-spacing:.15em;margin:4px;}
+.dbtn:hover{background:rgba(var(--ink-rgb),.04);}
+.dbtn.er{border-color:rgba(200,0,0,.35);color:var(--danger);}
 
 /* Death screen */
 #death-screen h1{font-family:var(--fnt);color:var(--danger);font-size:42px;letter-spacing:.5em;margin-bottom:12px;font-weight:700;}
-#death-screen p{color:rgba(160,0,0,.5);font-size:12px;letter-spacing:.2em;margin-bottom:28px;font-family:var(--fnt2);}
-#death-screen button{border:1px solid rgba(160,0,0,.4);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:13px;padding:12px 32px;cursor:pointer;letter-spacing:.25em;}
-#death-screen button:hover{background:rgba(160,0,0,.04);}
+#death-screen p{color:rgba(200,0,0,.5);font-size:12px;letter-spacing:.2em;margin-bottom:28px;font-family:var(--fnt2);}
+#death-screen button{border:1px solid rgba(200,0,0,.4);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:13px;padding:12px 32px;cursor:pointer;letter-spacing:.25em;}
+#death-screen button:hover{background:rgba(200,0,0,.04);}
 
 /* Message overlay */
 #msg-overlay{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--fnt2);font-size:14px;letter-spacing:.3em;color:var(--warn);pointer-events:none;z-index:30;opacity:0;transition:opacity .4s;text-align:center;}
 
 /* Pause modal */
-#pause-modal{display:none;position:fixed;inset:0;background:rgba(245,243,238,.95);z-index:180;align-items:center;justify-content:center;}
+#pause-modal{display:none;position:fixed;inset:0;background:rgba(var(--bg-rgb),.95);z-index:180;align-items:center;justify-content:center;}
 #pause-modal.open{display:flex;}
-#pause-box{border:1px solid rgba(0,0,0,.18);border-top:2px solid var(--ink);background:var(--bg);width:380px;padding:30px;text-align:center;color:rgba(0,0,0,.65);pointer-events:all;clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);}
+#pause-box{border:1px solid rgba(var(--ink-rgb),.18);border-top:2px solid var(--ink);background:var(--bg);width:380px;padding:30px;text-align:center;color:rgba(var(--ink-rgb),.65);pointer-events:all;clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%); transition:background 0.3s;}
 #pause-box h2{font-family:var(--fnt);font-size:26px;letter-spacing:.55em;color:var(--ink);margin-bottom:4px;font-weight:700;}
-#pause-box .sub{font-size:9px;letter-spacing:.3em;color:rgba(0,0,0,.3);margin-bottom:22px;font-family:var(--fnt);}
-.pause-stats{border-top:1px solid rgba(0,0,0,.08);border-bottom:1px solid rgba(0,0,0,.08);padding:12px 0;margin:16px 0;font-size:12px;line-height:2;letter-spacing:.08em;font-family:var(--fnt2);}
+#pause-box .sub{font-size:9px;letter-spacing:.3em;color:rgba(var(--ink-rgb),.3);margin-bottom:22px;font-family:var(--fnt);}
+.pause-stats{border-top:1px solid rgba(var(--ink-rgb),.08);border-bottom:1px solid rgba(var(--ink-rgb),.08);padding:12px 0;margin:16px 0;font-size:12px;line-height:2;letter-spacing:.08em;font-family:var(--fnt2);}
 .pause-stats span{color:var(--ink);font-weight:500;}
-.pbtn{display:block;width:100%;margin-top:8px;border:1px solid rgba(0,0,0,.18);background:transparent;color:rgba(0,0,0,.8);font-family:var(--fnt2);font-size:12px;letter-spacing:.2em;padding:10px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:background .15s;}
-.pbtn:hover{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.4);}
-.pbtn.dim{border-color:rgba(0,0,0,.08);color:rgba(0,0,0,.3);}
-.pbtn.dim:hover{background:rgba(0,0,0,.03);}
+.pbtn{display:block;width:100%;margin-top:8px;border:1px solid rgba(var(--ink-rgb),.18);background:transparent;color:var(--ink);font-family:var(--fnt2);font-size:12px;letter-spacing:.2em;padding:10px;cursor:pointer;clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);transition:background .15s;}
+.pbtn:hover{background:rgba(var(--ink-rgb),.06);border-color:rgba(var(--ink-rgb),.4);}
+.pbtn.dim{border-color:rgba(var(--ink-rgb),.08);color:rgba(var(--ink-rgb),.3);}
+.pbtn.dim:hover{background:rgba(var(--ink-rgb),.03);}
+
+/* Theme Color Picker Buttons */
+.color-btn {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--ink-rgb), 0.15);
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.color-btn:hover {
+  transform: scale(1.1);
+  border-color: var(--ink);
+}
+.color-btn.active {
+  border-color: var(--ink);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 /* Event banner */
 #event-banner{
   position:fixed;top:0;left:0;right:0;
-  background:rgba(245,243,238,.96);
-  border-bottom:1px solid rgba(0,0,0,.2);
+  background:rgba(var(--bg-rgb),.96);
+  border-bottom:1px solid rgba(var(--ink-rgb),.2);
   padding:10px 0;text-align:center;
   z-index:20;pointer-events:none;
   opacity:0;transition:opacity .4s;
@@ -239,29 +255,29 @@ body{
 }
 
 /* Touch controls */
-#joystick-zone{position:fixed;bottom:60px;left:20px;width:120px;height:120px;border-radius:50%;border:1px solid rgba(0,0,0,.15);z-index:20;display:none;touch-action:none;}
-#joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.03);}
-#joystick-knob{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.3);left:36px;top:36px;}
+#joystick-zone{position:fixed;bottom:60px;left:20px;width:120px;height:120px;border-radius:50%;border:1px solid rgba(var(--ink-rgb),.15);z-index:20;display:none;touch-action:none;}
+#joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(var(--ink-rgb),.03);}
+#joystick-knob{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(var(--ink-rgb),.1);border:1px solid rgba(var(--ink-rgb),.3);left:36px;top:36px;}
 #touch-btns{position:fixed;bottom:60px;right:20px;z-index:20;display:none;flex-direction:column;gap:8px;align-items:flex-end;}
-.tch-btn{background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.2);color:rgba(0,0,0,.7);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:10px 14px;cursor:pointer;touch-action:none;}
-.tch-btn.active{background:rgba(0,0,0,.1);border-color:var(--ink);color:var(--ink);}
+.tch-btn{background:rgba(var(--bg-rgb),.9);border:1px solid rgba(var(--ink-rgb),.2);color:rgba(var(--ink-rgb),.7);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:10px 14px;cursor:pointer;touch-action:none;}
+.tch-btn.active{background:rgba(var(--ink-rgb),.1);border-color:var(--ink);color:var(--ink);}
 .tch-row{display:flex;gap:8px;}
-#btn-pause-touch{position:fixed;top:14px;right:14px;background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.5);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:7px 14px;z-index:20;display:none;cursor:pointer;}
-#btn-map-touch{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:rgba(245,243,238,.85);border:1px solid rgba(0,0,0,.12);color:rgba(0,0,0,.45);font-family:var(--fnt2);font-size:8px;letter-spacing:.2em;padding:5px 14px;z-index:20;display:none;cursor:pointer;}
+#btn-pause-touch{position:fixed;top:14px;right:14px;background:rgba(var(--bg-rgb),.9);border:1px solid rgba(var(--ink-rgb),.15);color:rgba(var(--ink-rgb),.5);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:7px 14px;z-index:20;display:none;cursor:pointer;}
+#btn-map-touch{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:rgba(var(--bg-rgb),.85);border:1px solid rgba(var(--ink-rgb),.12);color:rgba(var(--ink-rgb),.45);font-family:var(--fnt2);font-size:8px;letter-spacing:.2em;padding:5px 14px;z-index:20;display:none;cursor:pointer;}
 @media(pointer:coarse){
   #joystick-zone,#touch-btns,#btn-pause-touch,#btn-map-touch{display:flex;}
   #hp-log{display:none;}
 }
 
 /* Stranded modal */
-#sbox{border:1px solid rgba(0,0,0,.2);background:var(--bg);width:440px;padding:24px;font-size:11px;color:rgba(0,0,0,.65);pointer-events:all;text-align:center;}
+#sbox{border:1px solid rgba(var(--ink-rgb),.2);background:var(--bg);width:440px;padding:24px;font-size:11px;color:rgba(var(--ink-rgb),.65);pointer-events:all;text-align:center;}
 #sbox h2{font-family:var(--fnt);font-size:12px;letter-spacing:.3em;color:var(--ink);margin-bottom:6px;}
-#sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:rgba(0,0,0,.55);}
+#sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:rgba(var(--ink-rgb),.55);}
 
 /* ── Speed Mode HUD ── */
 #speed-mode-hud{
   position:fixed;top:0;left:50%;transform:translateX(-50%);
-  background:var(--panel);border:1px solid rgba(0,0,0,.14);border-top:none;border-bottom:2px solid rgba(0,0,0,.5);
+  background:var(--panel);border:1px solid rgba(var(--ink-rgb),.14);border-top:none;border-bottom:2px solid rgba(var(--ink-rgb),.5);
   font-family:var(--fnt);font-size:8px;letter-spacing:.35em;
   padding:6px 18px 8px;z-index:11;pointer-events:none;
   display:flex;gap:20px;align-items:center;
@@ -269,51 +285,52 @@ body{
   margin-top:0;
 }
 .smode-btn{
-  padding:3px 10px;border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.3);
+  padding:3px 10px;border:1px solid rgba(var(--ink-rgb),.15);color:rgba(var(--ink-rgb),.3);
   font-family:var(--fnt);font-size:7px;letter-spacing:.3em;cursor:pointer;
   pointer-events:all;transition:all .15s;
   clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
+  background: transparent;
 }
-.smode-btn.active{border-color:rgba(0,0,0,.7);color:var(--ink);background:rgba(0,0,0,.07);}
-.smode-btn:hover:not(.active){border-color:rgba(0,0,0,.35);color:rgba(0,0,0,.6);}
-.smode-btn.hyperdrive{border-color:rgba(160,60,0,.5);color:var(--accent);}
-.smode-btn.hyperdrive.active{background:rgba(160,60,0,.08);}
+.smode-btn.active{border-color:rgba(var(--ink-rgb),.7);color:var(--ink);background:rgba(var(--ink-rgb),.07);}
+.smode-btn:hover:not(.active){border-color:rgba(var(--ink-rgb),.35);color:rgba(var(--ink-rgb),.6);}
+.smode-btn.hyperdrive{border-color:var(--accent);color:var(--accent); opacity:0.8;}
+.smode-btn.hyperdrive.active{background:rgba(var(--ink-rgb),.08); opacity:1;}
 #smode-label{color:var(--ink);font-size:9px;letter-spacing:.25em;min-width:80px;text-align:center;}
 
 /* ── Hyperdrive Destination Modal ── */
 #hyperdrive-modal{
   display:none;position:fixed;inset:0;
-  background:rgba(245,243,238,.93);z-index:115;
+  background:rgba(var(--bg-rgb),.93);z-index:115;
   align-items:center;justify-content:center;
   backdrop-filter:blur(14px);
 }
 #hyperdrive-modal.open{display:flex;}
 #hyperdrive-box{
-  border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--accent);
+  border:1px solid rgba(var(--ink-rgb),.2);border-top:2px solid var(--accent);
   background:var(--bg);width:520px;max-height:80vh;overflow-y:auto;padding:24px;
-  font-family:var(--fnt2);font-size:12px;color:rgba(0,0,0,.65);
+  font-family:var(--fnt2);font-size:12px;color:rgba(var(--ink-rgb),.65);
   pointer-events:all;
   clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
 }
 #hyperdrive-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--accent);margin-bottom:4px;font-weight:500;}
-#hyperdrive-box .hd-sub{font-size:10px;color:rgba(0,0,0,.35);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:10px;}
+#hyperdrive-box .hd-sub{font-size:10px;color:rgba(var(--ink-rgb),.35);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(var(--ink-rgb),.08);padding-bottom:10px;}
 #hyperdrive-box .hd-fuel-warn{
   font-size:11px;color:var(--warn);letter-spacing:.1em;margin-bottom:14px;
-  border:1px solid rgba(200,100,0,.25);padding:8px 12px;background:rgba(200,100,0,.04);
+  border:1px solid var(--warn);padding:8px 12px;background:rgba(var(--ink-rgb),.04);
 }
 .hd-dest{
   display:grid;grid-template-columns:1fr 90px 80px;gap:8px;align-items:center;
-  border:1px solid rgba(0,0,0,.1);padding:10px 12px;margin-bottom:6px;cursor:pointer;
+  border:1px solid rgba(var(--ink-rgb),.1);padding:10px 12px;margin-bottom:6px;cursor:pointer;
   transition:border-color .15s,background .15s;font-size:11px;
 }
-.hd-dest:hover{border-color:rgba(0,0,0,.4);background:rgba(0,0,0,.03);}
+.hd-dest:hover{border-color:rgba(var(--ink-rgb),.4);background:rgba(var(--ink-rgb),.03);}
 .hd-dest .hd-name{color:var(--ink);font-family:var(--fnt);font-size:9px;letter-spacing:.25em;}
-.hd-dest .hd-dist{color:rgba(0,0,0,.4);font-size:10px;}
+.hd-dest .hd-dist{color:rgba(var(--ink-rgb),.4);font-size:10px;}
 .hd-dest .hd-jump{color:var(--accent);font-size:10px;text-align:right;}
 .hd-dest.no-fuel{opacity:.4;cursor:not-allowed;}
-.hd-dest.no-fuel:hover{border-color:rgba(0,0,0,.1);background:transparent;}
-#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(0,0,0,.12);background:transparent;color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
-#hyperdrive-close:hover{background:rgba(0,0,0,.04);}
+.hd-dest.no-fuel:hover{border-color:rgba(var(--ink-rgb),.1);background:transparent;}
+#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(var(--ink-rgb),.12);background:transparent;color:rgba(var(--ink-rgb),.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#hyperdrive-close:hover{background:rgba(var(--ink-rgb),.04);}
 
 /* ── Trajectory Warning ── */
 #traj-warning{
@@ -324,12 +341,12 @@ body{
 #traj-warning.active{display:block;}
 #traj-warning .tw-box{
   border:2px solid var(--danger);padding:12px 28px;
-  background:rgba(245,243,238,.9);
+  background:rgba(var(--bg-rgb),.9);
   font-family:var(--fnt);font-size:11px;letter-spacing:.3em;color:var(--danger);
   animation:twPulse .35s ease-in-out infinite alternate;
   clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);
 }
-@keyframes twPulse{from{border-color:rgba(204,0,0,.4);color:rgba(204,0,0,.6);}to{border-color:var(--danger);color:var(--danger);}}
+@keyframes twPulse{from{opacity: 0.8;}to{opacity: 1;}}
 
 /* ── Wormhole overlay ── */
 #wormhole-overlay{
@@ -387,7 +404,7 @@ body{
   <p>STELLAR MAP</p>
   <p id="stats-discovered">DISCOVERED: 1</p>
   <p id="stats-zoom">ZOOM: 1.0x</p>
-  <p style="color:#333;margin-top:10px">[M] CLOSE · SCROLL ZOOM</p>
+  <p style="color:var(--ink); opacity:0.6; margin-top:10px">[M] CLOSE · SCROLL ZOOM</p>
 </div>
 
 <div id="hud">
@@ -431,19 +448,19 @@ body{
   <h2 id="trade-title">DOCKING INTERFACE</h2>
   <div class="trow th"><span>COMMODITY</span><span>STOCK</span><span>BUY/u</span><span>SELL/u</span><span>OWNED</span><span></span></div>
   <div id="trade-rows"></div>
-  <div style="margin-top:12px;font-size:10px;color:rgba(0,0,0,.35)">
+  <div style="margin-top:12px;font-size:10px;color:rgba(var(--ink-rgb),.35)">
     FUEL: <span id="fuel-cost-label">–</span>
     <button class="tbtn" id="btn-refuel" style="margin-left:8px">REFUEL</button>
     &nbsp; HULL: <span id="repair-cost-label">–</span>
     <button class="tbtn" id="btn-repair" style="margin-left:8px">REPAIR</button>
   </div>
-  <div style="margin-top:6px;font-size:10px;color:rgba(0,0,0,.35)">
+  <div style="margin-top:6px;font-size:10px;color:rgba(var(--ink-rgb),.35)">
     SHIELD: <span id="shield-cost-label">5,000 CR</span>
     <button class="tbtn" id="btn-shield">INSTALL</button>
   </div>
   <div id="bounty-area" style="display:none;margin-top:10px;">
-    <div style="font-size:9px;color:rgba(0,0,0,.35);letter-spacing:.25em;border-top:1px solid rgba(0,0,0,.1);padding-top:8px;font-family:var(--fnt)">★ BOUNTY BOARD</div>
-    <div id="bounty-text" style="font-size:10px;color:rgba(0,0,0,.45);margin-top:6px;line-height:1.7"></div>
+    <div style="font-size:9px;color:rgba(var(--ink-rgb),.35);letter-spacing:.25em;border-top:1px solid rgba(var(--ink-rgb),.1);padding-top:8px;font-family:var(--fnt)">★ BOUNTY BOARD</div>
+    <div id="bounty-text" style="font-size:10px;color:rgba(var(--ink-rgb),.45);margin-top:6px;line-height:1.7"></div>
     <button class="tbtn" id="btn-bounty" style="margin-top:6px">ACCEPT BOUNTY</button>
   </div>
   <div id="contract-panel">
@@ -456,19 +473,19 @@ body{
 
 <div id="distress-modal"><div id="distress-box">
   <h2>⚠ FUEL DEPLETED</h2>
-  <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:rgba(0,0,0,.4)">Caution: signal attracts hostiles.</span></p>
+  <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:rgba(var(--ink-rgb),.4)">Caution: signal attracts hostiles.</span></p>
   <button class="dbtn" id="btn-distress">SEND DISTRESS SIGNAL</button>
   <button class="dbtn er" id="btn-drift">DRIFT (risky)</button>
 </div></div>
 
 <div id="stranded-modal"><div id="sbox">
   <h2>⚠ DISTRESS BEACON</h2>
-  <div style="font-size:9px;color:rgba(0,0,0,.3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
+  <div style="font-size:9px;color:rgba(var(--ink-rgb),.3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
   <p>A stranded merchant requests assistance. Drive failure detected.</p>
   <button class="tbtn" id="btn-help-parts"  style="display:block;width:100%;margin:5px 0;padding:8px">[ DELIVER PARTS · 5× PARTS → +1,500 CR ]</button>
   <button class="tbtn" id="btn-help-escort" style="display:block;width:100%;margin:5px 0;padding:8px">[ ESCORT TO STATION → +2,000 CR ]</button>
-  <button class="tbtn sell" id="btn-loot"   style="display:block;width:100%;margin:5px 0;padding:8px;border-color:rgba(255,85,85,.35);color:var(--danger)">[ LOOT (−karma) ]</button>
-  <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.25)">[ IGNORE ]</button>
+  <button class="tbtn sell" id="btn-loot"   style="display:block;width:100%;margin:5px 0;padding:8px">[ LOOT (−karma) ]</button>
+  <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(var(--ink-rgb),.1);color:rgba(var(--ink-rgb),.25)">[ IGNORE ]</button>
 </div></div>
 
 <div id="death-screen">
@@ -490,6 +507,19 @@ body{
     <div>CONTRACTS<span id="pause-contracts">0</span></div>
     <div>SEED     <span id="pause-seed">–</span></div>
   </div>
+  
+  <div class="pause-settings" style="border-top:1px solid rgba(var(--ink-rgb),.08); border-bottom:1px solid rgba(var(--ink-rgb),.08); padding:16px 0; margin-bottom:16px;">
+    <div style="font-family:var(--fnt); font-size:9px; letter-spacing:.25em; color:rgba(var(--ink-rgb),.5); margin-bottom:10px;">VISUAL SETTINGS</div>
+    <button class="pbtn" id="btn-theme-toggle" style="margin-top:0;">MODE: LIGHT</button>
+    <div style="display:flex; gap:12px; margin-top:12px; justify-content:center; align-items:center;" id="color-picker-container">
+       <button class="color-btn active" data-color="#cc4400" style="background:#cc4400;" title="Orange"></button>
+       <button class="color-btn" data-color="#00cc66" style="background:#00cc66;" title="Neon Green"></button>
+       <button class="color-btn" data-color="#0088ff" style="background:#0088ff;" title="Cyber Blue"></button>
+       <button class="color-btn" data-color="#aa00cc" style="background:#aa00cc;" title="Purple"></button>
+       <input type="color" id="custom-color-picker" style="width:26px; height:26px; padding:0; border:none; cursor:pointer; background:transparent;" title="Custom Color">
+    </div>
+  </div>
+
   <button class="pbtn" id="btn-resume">[ RESUME ]</button>
   <button class="pbtn" id="btn-save-quit">[ SAVE & QUIT ]</button>
   <button class="pbtn dim" id="btn-pause-reset">[ ERASE SAVE ]</button>
@@ -497,7 +527,7 @@ body{
 
 <div id="boot">
   <h1>VOIDTRADER</h1>
-  <div class="sub">MILKY WAY COMMERCE · WHITE SECTOR EDITION v2.1</div>
+  <div class="sub">MILKY WAY COMMERCE · WHITE & DARK SECTOR EDITION v2.2</div>
   <div class="bl ok">KERNEL LOADED</div>
   <div class="bl ok">CANVAS RENDERER READY</div>
   <div class="bl ok">PROCEDURAL SECTOR ENGINE ONLINE</div>
@@ -506,9 +536,7 @@ body{
   <div class="bl ok">ESCORT & DELIVERY SYSTEM READY</div>
   <div class="bl ok">CARTOGRAPHY SYSTEM ONLINE</div>
   <div class="bl ok">SAVE SYSTEM READY</div>
-  <div class="bl ok">SPEED MODE SYSTEM · MANEUVER / COSMIC</div>
-  <div class="bl ok">HYPERDRIVE & WORMHOLE ENGINE ONLINE</div>
-  <div class="bl ok">TRAJECTORY WARNING SYSTEM ACTIVE</div>
+  <div class="bl ok">THEME ENGINE ONLINE</div>
   <button id="boot-start">[ LAUNCH SEQUENCE ]</button>
   <button id="boot-reset">[ ERASE SAVE ]</button>
 </div>
@@ -516,37 +544,8 @@ body{
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
 //
-//   VOIDTRADER · White Galaxy Mode  (Black ink on warm paper)
-//   v2.1 — fixed + AI-editing-optimised
-//
-//   SECTION MAP  (search for ## to jump between sections)
-//   ─────────────────────────────────────────────────────
-//   ## CONFIG          — all tuneable numbers in one object
-//   ## UTILS           — helpers: RNG, colour, geometry
-//   ## CANVAS SETUP    — canvas, resize, camera
-//   ## GALAXY BG       — offline galaxy texture + star layers
-//   ## SHIP            — ship state, physics, drawing
-//   ## STATIONS        — procedural generation, draw, docking
-//   ## CONTRACTS       — delivery contract system
-//   ## TRADING         — buy/sell, refuel, repair, shield
-//   ## CARGO & DROPS   — loot, cargo HUD
-//   ## ENEMIES         — pirate AI, laser fire
-//   ## METEORS         — meteors + splits
-//   ## BLACK HOLES     — singularity events
-//   ## SWARMS          — asteroid swarm events
-//   ## SHIELD          — shield subsystem
-//   ## STRANDED SHIPS  — escort / rescue missions
-//   ## BOSS            — alien boss + projectiles
-//   ## KARMA           — karma system
-//   ## MINIMAP         — minimap canvas
-//   ## HUD             — updateHUD, addLog
-//   ## UI HELPERS      — messages, banners, modal guard
-//   ## SAVE / LOAD     — localStorage save system
-//   ## KEYBOARD        — key bindings
-//   ## TOUCH           — mobile joystick + buttons
-//   ## GAMEPAD         — xbox controller mapping & inputs
-//   ## MAIN LOOP       — requestAnimationFrame loop
-//   ## BOOT            — boot screen handler
+//   VOIDTRADER · White & Dark Galaxy Mode
+//   v2.2 — Added dynamic dark mode and color picker
 //
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -670,6 +669,79 @@ function angleDiff(a, b) {
 }
 
 
+// ── ## THEME & COLOR LOGIC ──────────────────────────────────────────────────
+
+let isDarkMode = localStorage.getItem('vt_theme') === 'dark';
+const savedColor = localStorage.getItem('vt_color') || '#cc4400';
+
+const PAL = {
+  bg:'#f5f3ee', ink:'#000000', ink2:'#555555', ink3:'#999999', ink4:'#cccccc',
+  safe:'#006600', warn:'#cc6600', danger:'#cc0000', accent: savedColor,
+};
+
+function applyTheme(init = false) {
+  const root = document.documentElement;
+  const btn = document.getElementById('btn-theme-toggle');
+  
+  if (isDarkMode) {
+    root.style.setProperty('--bg', '#121215');
+    root.style.setProperty('--bg-rgb', '18, 18, 21');
+    root.style.setProperty('--panel', 'rgba(18,18,21,0.92)');
+    root.style.setProperty('--ink', '#e4e4e4');
+    root.style.setProperty('--ink-rgb', '228, 228, 228');
+    PAL.bg = '#121215';
+    PAL.ink = '#e4e4e4';
+    if(btn) btn.textContent = 'MODE: DARK';
+  } else {
+    root.style.setProperty('--bg', '#f5f3ee');
+    root.style.setProperty('--bg-rgb', '245, 243, 238');
+    root.style.setProperty('--panel', 'rgba(245,243,238,0.92)');
+    root.style.setProperty('--ink', '#000000');
+    root.style.setProperty('--ink-rgb', '0, 0, 0');
+    PAL.bg = '#f5f3ee';
+    PAL.ink = '#000000';
+    if(btn) btn.textContent = 'MODE: LIGHT';
+  }
+  
+  localStorage.setItem('vt_theme', isDarkMode ? 'dark' : 'light');
+  
+  if(!init && typeof buildGalaxy === 'function') {
+    buildGalaxy();
+    regenerateStars();
+  }
+}
+
+function applyAccentColor(hex) {
+  document.documentElement.style.setProperty('--accent', hex);
+  PAL.accent = hex;
+  localStorage.setItem('vt_color', hex);
+  
+  document.querySelectorAll('.color-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toLowerCase() === hex.toLowerCase());
+  });
+  document.getElementById('custom-color-picker').value = hex;
+}
+
+document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+  isDarkMode = !isDarkMode;
+  applyTheme();
+});
+
+document.querySelectorAll('.color-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    applyAccentColor(e.target.dataset.color);
+  });
+});
+
+document.getElementById('custom-color-picker').addEventListener('input', (e) => {
+  applyAccentColor(e.target.value);
+});
+
+// Initialize Theme
+applyTheme(true);
+applyAccentColor(savedColor);
+
+
 // ── ## CANVAS SETUP ─────────────────────────────────────────────────────────
 
 const canvas  = document.getElementById('canvas');
@@ -678,11 +750,6 @@ const mmCv    = document.getElementById('minimap');
 const mmx     = mmCv.getContext('2d');
 const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const isMobile= isTouch && window.innerWidth <= 1024;
-
-const PAL = {
-  bg:'#f5f3ee', ink:'#000000', ink2:'#555555', ink3:'#999999', ink4:'#cccccc',
-  safe:'#006600', warn:'#cc6600', danger:'#cc0000', accent:'#cc4400',
-};
 
 const SEED = parseInt(localStorage.getItem('vt_seed')) || (Math.random()*0xFFFFFF|0);
 localStorage.setItem('vt_seed', SEED);
@@ -711,6 +778,7 @@ const wy = y => canvas.height/2 + (y - cam.y);
 // ── ## GALAXY BG ────────────────────────────────────────────────────────────
 
 let galaxyCanvas = null;
+let starLayers = [];
 
 function buildGalaxy() {
   const rng = makePRNG(SEED ^ 0xDEAD);
@@ -719,7 +787,7 @@ function buildGalaxy() {
   gc.width = GW; gc.height = GH;
   const gx = gc.getContext('2d');
 
-  gx.fillStyle = '#f5f3ee';
+  gx.fillStyle = PAL.bg;
   gx.fillRect(0, 0, GW, GH);
 
   for (let arm = 0; arm < 5; arm++) {
@@ -733,7 +801,12 @@ function buildGalaxy() {
       const py = GH/2 + Math.sin(twist)*r + Math.sin(twist+Math.PI/2)*spread;
       const alpha = (.015 + rng()*.025) * (1 - t*.5);
       gx.beginPath(); gx.arc(px, py, 0.8 + rng()*2.5, 0, Math.PI*2);
-      gx.fillStyle = rng()<.6 ? `rgba(160,145,130,${alpha})` : `rgba(140,130,155,${alpha})`;
+      
+      if(isDarkMode) {
+          gx.fillStyle = rng()<.6 ? `rgba(120,160,255,${alpha*1.6})` : `rgba(200,120,255,${alpha*1.6})`;
+      } else {
+          gx.fillStyle = rng()<.6 ? `rgba(160,145,130,${alpha})` : `rgba(140,130,155,${alpha})`;
+      }
       gx.fill();
     }
   }
@@ -742,7 +815,11 @@ function buildGalaxy() {
     const a = rng()*Math.PI*2, r = Math.pow(rng(), 2)*200;
     const px = GW/2 + Math.cos(a)*r, py = GH/2 + Math.sin(a)*r;
     gx.beginPath(); gx.arc(px, py, rng()*1.8+.3, 0, Math.PI*2);
-    gx.fillStyle = `rgba(180,165,140,${.008 + rng()*.018})`;
+    if(isDarkMode) {
+        gx.fillStyle = `rgba(230,240,255,${.01 + rng()*.025})`;
+    } else {
+        gx.fillStyle = `rgba(180,165,140,${.008 + rng()*.018})`;
+    }
     gx.fill();
   }
 
@@ -750,23 +827,41 @@ function buildGalaxy() {
     const px = rng()*GW, py = rng()*GH;
     const sz = rng() < .04 ? rng()*1.4+.6 : rng()*.6+.15;
     gx.beginPath(); gx.arc(px, py, sz, 0, Math.PI*2);
-    gx.fillStyle = `rgba(30,25,40,${rng()*.55+.12})`;
+    if(isDarkMode) {
+        gx.fillStyle = `rgba(200,220,255,${rng()*.5+.15})`;
+    } else {
+        gx.fillStyle = `rgba(30,25,40,${rng()*.55+.12})`;
+    }
     gx.fill();
   }
   galaxyCanvas = gc;
 }
 
-const starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
-  const rng   = makePRNG(SEED + li*777);
-  const count = [40, 60, 80, 35][li];
-  return Array.from({ length: count }, () => ({
-    nx: rng(), ny: rng(),
-    size:  li===3 ? rng()*1.4+0.5 : rng()*(li===2?1.0:0.6)+0.15,
-    alpha: rng()*(li===3?.7:.5)+.1,
-    par,
-    col: rng()<.15 ? '35,28,55' : rng()<.08 ? '55,40,25' : '20,20,25',
-  }));
-});
+function regenerateStars() {
+  starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
+    const rng   = makePRNG(SEED + li*777);
+    const count = [40, 60, 80, 35][li];
+    return Array.from({ length: count }, () => {
+      let col = '';
+      if(isDarkMode) {
+          col = rng()<.15 ? '200,220,255' : rng()<.08 ? '255,200,200' : '230,230,245';
+      } else {
+          col = rng()<.15 ? '35,28,55' : rng()<.08 ? '55,40,25' : '20,20,25';
+      }
+      return {
+        nx: rng(), ny: rng(),
+        size:  li===3 ? rng()*1.4+0.5 : rng()*(li===2?1.0:0.6)+0.15,
+        alpha: rng()*(li===3?.7:.5)+.1,
+        par,
+        col
+      };
+    });
+  });
+}
+
+// Initial draw calls
+buildGalaxy();
+regenerateStars();
 
 function drawGalaxy() {
   if (!galaxyCanvas) return;
@@ -999,7 +1094,7 @@ function openHyperdriveMenu() {
   const stations = [homeStation, ...Array.from(stCache.values()).filter(s => s && s.discovered && s !== homeStation)];
 
   if (stations.length <= 1) {
-    destList.innerHTML = '<div style="color:rgba(0,0,0,.35);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
+    destList.innerHTML = '<div style="color:rgba(var(--ink-rgb),.35);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
   } else {
     stations.forEach(st => {
       if (!st) return;
@@ -1339,10 +1434,10 @@ function tryDock() {
     const bt = document.getElementById('bounty-text');
     const bb = document.getElementById('btn-bounty');
     if (bountyAccepted) {
-      bt.innerHTML = 'Active hunt: <span style="color:#000">ALIEN PRESENCE</span><br>Reward: ' + bountyReward + ' CR';
+      bt.innerHTML = 'Active hunt: <span style="color:var(--ink)">ALIEN PRESENCE</span><br>Reward: ' + bountyReward + ' CR';
       bb.style.display = 'none';
     } else {
-      bt.innerHTML = 'Hunt the alien terrorising this sector.<br>Cost: <span style="color:#000">2,000 CR</span> · Reward: <span style="color:#000">15,000 CR</span>';
+      bt.innerHTML = 'Hunt the alien terrorising this sector.<br>Cost: <span style="color:var(--ink)">2,000 CR</span> · Reward: <span style="color:var(--ink)">15,000 CR</span>';
       bb.style.display = 'inline-block';
     }
   }
@@ -1564,7 +1659,7 @@ function buildContractPanel(st) {
     const d = document.createElement('div');
     d.className = 'cjob active';
     d.innerHTML = `<div class="cname" style="color:var(--accent)">★ ACTIVE DELIVERY</div>
-      <div class="cinfo">Deliver ${activeContract.qty}× ${activeContract.good} to <span style="color:#000">${activeContract.to}</span></div>
+      <div class="cinfo">Deliver ${activeContract.qty}× ${activeContract.good} to <span style="color:var(--ink)">${activeContract.to}</span></div>
       <div class="crew" style="color:var(--accent)">+${activeContract.reward.toLocaleString()} CR</div>`;
     el.appendChild(d);
   }
@@ -1577,7 +1672,7 @@ function buildContractPanel(st) {
       const canDo  = myQty >= c.qty;
       const div    = document.createElement('div');
       div.className = 'cjob' + (canDo ? '' : ' dim');
-      div.innerHTML = `<div class="cname">${c.from} → <span style="color:#000">${c.to}</span></div>
+      div.innerHTML = `<div class="cname">${c.from} → <span style="color:var(--ink)">${c.to}</span></div>
         <div class="cinfo">Deliver ${c.qty}× ${c.good} &nbsp;·&nbsp; ${fmtDist(c.dist)} &nbsp;·&nbsp; Have: ${myQty}</div>
         <span class="crew">+${c.reward.toLocaleString()} CR</span>`;
       div.style.cursor = 'pointer';
@@ -1606,7 +1701,7 @@ function drawContractNav() {
   ctx.save(); ctx.translate(ix, iy); ctx.rotate(ang + Math.PI/2);
   ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(16,12); ctx.lineTo(-16,12); ctx.closePath();
   ctx.fillStyle = wa(PAL.accent, pulse); ctx.fill();
-  ctx.fillStyle = '#f5f3ee'; ctx.font = 'bold 13px Share Tech Mono'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = PAL.bg; ctx.font = 'bold 13px Share Tech Mono'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('◆', 0, 0);
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
@@ -2019,7 +2114,7 @@ function drawBlackHoles() {
       ctx.strokeStyle=wa(PAL.ink,.4); ctx.lineWidth=1.2; ctx.stroke();
     }
     ctx.restore();
-    ctx.beginPath(); ctx.arc(sx,sy,55,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx,sy,55,0,Math.PI*2); ctx.fillStyle=PAL.ink; ctx.fill(); ctx.strokeStyle=PAL.bg; ctx.lineWidth=1.2; ctx.stroke();
     ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,.3); ctx.textAlign='center';
     ctx.fillText('SINGULARITY', sx, sy+CFG.BH_PULL+12);
   }
@@ -2078,7 +2173,7 @@ function drawSwarms() {
       ctx.save(); ctx.translate(ix,iy); ctx.rotate(ang+Math.PI/2);
       ctx.beginPath(); ctx.moveTo(0,-24); ctx.lineTo(18,10); ctx.lineTo(-18,10); ctx.closePath();
       ctx.fillStyle=wa(PAL.ink,pulse); ctx.fill();
-      ctx.fillStyle='#000'; ctx.font='bold 16px Share Tech Mono'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',0,0);
+      ctx.fillStyle=PAL.bg; ctx.font='bold 16px Share Tech Mono'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('!',0,0);
       ctx.restore(); ctx.textBaseline='alphabetic';
       ctx.font='9px Share Tech Mono'; ctx.fillStyle=wa(PAL.ink,pulse); ctx.textAlign='center';
       ctx.fillText('SWARM '+s.warningTime.toFixed(1)+'s', ix, iy+36);
@@ -2318,9 +2413,9 @@ function drawBoss() {
   }
   ctx.beginPath();
   for (let i=0;i<12;i++) { const a=(i/12)*Math.PI*2, r=b.radius+Math.sin(b.tentacleRot*4+i)*4; if (i===0) ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r); else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r); }
-  ctx.closePath(); ctx.fillStyle='#000'; ctx.fill(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.closePath(); ctx.fillStyle=PAL.bg; ctx.fill(); ctx.strokeStyle=PAL.ink; ctx.lineWidth=1.8; ctx.stroke();
   ctx.beginPath(); ctx.arc(0,0,14,0,Math.PI*2); ctx.fillStyle=PAL.ink; ctx.fill();
-  ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fillStyle='#000'; ctx.fill();
+  ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fillStyle=PAL.bg; ctx.fill();
   ctx.restore();
   const bw=120;
   ctx.fillStyle=wa(PAL.ink,.08); ctx.fillRect(sx-bw/2,sy-b.radius-18,bw,6);
@@ -2346,7 +2441,7 @@ function drawMinimap() {
   const W=mmCv.width, H=mmCv.height;
   const isFS = mmCv.classList.contains('fullscreen');
   mmx.clearRect(0,0,W,H);
-  mmx.fillStyle = isFS ? PAL.bg : 'rgba(245,243,238,.95)'; mmx.fillRect(0,0,W,H);
+  mmx.fillStyle = isFS ? PAL.bg : `rgba(${isDarkMode ? '18,18,21' : '245,243,238'},.95)`; mmx.fillRect(0,0,W,H);
   const range = isFS ? (8000/mmZoom) : 2500;
   const scale = Math.min(W,H) / (range*2);
   const cx=W/2, cy=H/2;
@@ -2463,9 +2558,11 @@ function drawControls() {
 }
 
 function drawVignette() {
+  const gradientInner = isDarkMode ? 'rgba(0,0,0,0)' : 'rgba(210,200,185,0)';
+  const gradientOuter = isDarkMode ? 'rgba(0,0,0,0.6)' : 'rgba(190,180,165,0.22)';
   const vg=ctx.createRadialGradient(canvas.width/2,canvas.height/2,canvas.height*.35,canvas.width/2,canvas.height/2,canvas.height*.88);
-  vg.addColorStop(0,'rgba(210,200,185,0)');
-  vg.addColorStop(1,'rgba(190,180,165,0.22)');
+  vg.addColorStop(0, gradientInner);
+  vg.addColorStop(1, gradientOuter);
   ctx.fillStyle=vg; ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
@@ -2480,7 +2577,7 @@ function showMsg(text, duration=1800) {
 
 function showEventBanner(title, sub, duration=4000) {
   const b=document.getElementById('event-banner');
-  b.innerHTML=`<div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:.3em;color:#000">${title}</div><div style="font-size:10px;letter-spacing:.2em;color:rgba(0,0,0,.4);margin-top:3px">${sub}</div>`;
+  b.innerHTML=`<div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:.3em;color:var(--ink)">${title}</div><div style="font-size:10px;letter-spacing:.2em;color:rgba(var(--ink-rgb),.4);margin-top:3px">${sub}</div>`;
   b.style.opacity='1'; clearTimeout(b._t); b._t=setTimeout(()=>b.style.opacity='0', duration);
 }
 
@@ -2696,7 +2793,7 @@ const GamepadInput = {
     const container = isPaused ? document.getElementById('pause-modal') : modal;
     
     // Select standard buttons + custom interactive divs
-    const focusables = Array.from(container.querySelectorAll('button:not([disabled]), .cjob:not(.dim), .hd-dest:not(.no-fuel)'))
+    const focusables = Array.from(container.querySelectorAll('button:not([disabled]), .cjob:not(.dim), .hd-dest:not(.no-fuel), .color-btn, #custom-color-picker'))
                             .filter(el => el.offsetParent !== null);
                             
     if (focusables.length === 0) return;
@@ -2716,7 +2813,7 @@ const GamepadInput = {
   clickUI: function() {
     const target = document.querySelector('.gp-focus');
     if (target) {
-      if (target.tagName === 'BUTTON') target.click();
+      if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') target.click();
       else if (target.onclick) target.onclick();
     } else {
         // Fallback: If nothing has focus, press the primary visible button if available
@@ -2846,5 +2943,3 @@ document.getElementById('boot-start').addEventListener('click', () => {
 </script>
 </body>
 </html>
-
-```
