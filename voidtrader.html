@@ -1833,9 +1833,12 @@ function drawStationTorus(st, scx, scy, stRot) {
   // Ring body
   ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
   ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = r*0.22; ctx.stroke();
-  // Inner edge of ring
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
-  ctx.strokeStyle = wa(PAL.ink, .04); ctx.lineWidth = r*0.17; ctx.stroke();
+  // Punch out the inner hole so the ring isn't a solid disc
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(0, 0, r - r*0.22/2, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(0,0,0,1)'; ctx.fill();
+  ctx.restore();
   // Structural segments on ring
   for (let i = 0; i < 12; i++) {
     const a = (i/12)*Math.PI*2;
