@@ -110,8 +110,8 @@ body{
   top:0;left:0;right:0;bottom:0;width:100%;height:100%;
   border-radius:0;clip-path:none;border:none;z-index:80;background:var(--bg);cursor:default;
 }
-#minimap-label.fullscreen{top:14px;right:14px;left:auto;bottom:auto;width:auto;font-size:11px;color:rgba(0,0,0,.5);}
-#minimap-stats-fs{display:none;position:fixed;top:14px;left:14px;z-index:81;font-size:12px;color:rgba(0,0,0,.4);letter-spacing:.07em;font-family:var(--fnt2);}
+#minimap-label.fullscreen{top:14px;right:14px;left:auto;bottom:auto;width:auto;font-size:11px;color:var(--ink3);}
+#minimap-stats-fs{display:none;position:fixed;top:14px;left:14px;z-index:81;font-size:12px;color:var(--ink3);letter-spacing:.07em;font-family:var(--fnt2);}
 #minimap-stats-fs.visible{display:block;}
 #minimap-stats-fs p{margin-bottom:5px;}
 
@@ -144,7 +144,7 @@ body{
 }
 #contract-hud .ct{font-family:var(--fnt);font-size:8px;letter-spacing:.4em;color:var(--ink3);margin-bottom:3px;}
 #contract-hud .cc{color:var(--ink);letter-spacing:.12em;}
-#contract-hud .cd{color:rgba(0,0,0,.5);font-size:10px;margin-top:2px;}
+#contract-hud .cd{color:var(--ink3);font-size:10px;margin-top:2px;}
 
 /* ── Modals ── */
 #trade-modal,#distress-modal,#stranded-modal{
@@ -166,38 +166,38 @@ body{
   clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
 }
 #trade-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--ink);margin-bottom:16px;font-weight:500;}
-.trow{display:grid;grid-template-columns:110px 50px 70px 70px 50px 120px;gap:6px;align-items:center;margin-bottom:4px;font-size:11px;}
-.trow.th{color:var(--ink3);font-size:9px;letter-spacing:.2em;border-bottom:1px solid rgba(128,128,128,.12);padding-bottom:5px;margin-bottom:8px;font-family:var(--fnt);}
+.trow{display:grid;grid-template-columns:110px 50px 70px 70px 50px 120px;gap:6px;align-items:center;margin-bottom:4px;font-size:11px;color:var(--ink2);}
+.trow.th{color:var(--ink3);font-size:9px;letter-spacing:.2em;border-bottom:1px solid rgba(128,128,128,.18);padding-bottom:5px;margin-bottom:8px;font-family:var(--fnt);}
 .tbtn{
-  border:1px solid rgba(128,128,128,.22);background:transparent;color:var(--ink);
+  border:1px solid rgba(128,128,128,.28);background:transparent;color:var(--ink);
   font-family:var(--fnt2);font-size:10px;padding:4px 8px;cursor:pointer;
   clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%);
   letter-spacing:.1em;transition:background .15s;
 }
-.tbtn:hover{background:rgba(128,128,128,.08);}
-.tbtn.sell{border-color:rgba(160,60,0,.4);color:var(--accent);}
-.tbtn.sell:hover{background:rgba(160,60,0,.06);}
+.tbtn:hover{background:rgba(128,128,128,.12);}
+.tbtn.sell{border-color:rgba(var(--accent-rgb),.45);color:var(--accent);}
+.tbtn.sell:hover{background:rgba(var(--accent-rgb),.08);}
 .tactions{display:flex;gap:4px;}.tactions .tbtn{flex:1;}
-#trade-close{margin-top:16px;width:100%;border:1px solid rgba(128,128,128,.12);background:transparent;color:var(--ink3);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
-#trade-close:hover{background:rgba(0,0,0,.04);}
+#trade-close{margin-top:16px;width:100%;border:1px solid rgba(128,128,128,.18);background:transparent;color:var(--ink3);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#trade-close:hover{background:rgba(128,128,128,.07);}
 
 /* Contract panel inside trade */
-#contract-panel{border-top:1px solid rgba(0,0,0,.08);margin-top:12px;padding-top:12px;}
-#contract-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:rgba(0,0,0,.3);margin-bottom:10px;}
-.cjob{border:1px solid rgba(128,128,128,.12);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;}
-.cjob:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.04);}
-.cjob.active{border-color:var(--ink);background:rgba(128,128,128,.05);}
+#contract-panel{border-top:1px solid rgba(128,128,128,.15);margin-top:12px;padding-top:12px;}
+#contract-panel h3{font-family:var(--fnt);font-size:9px;letter-spacing:.35em;color:var(--ink3);margin-bottom:10px;}
+.cjob{border:1px solid rgba(128,128,128,.15);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s;}
+.cjob:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.06);}
+.cjob.active{border-color:var(--ink);background:rgba(128,128,128,.07);}
 .cjob .cname{color:var(--ink);font-size:11px;letter-spacing:.1em;margin-bottom:4px;}
-.cjob .cinfo{color:var(--ink3);font-size:10px;line-height:1.6;}
+.cjob .cinfo{color:var(--ink2);font-size:10px;line-height:1.6;}
 .cjob .crew{color:var(--accent);font-size:11px;font-weight:500;float:right;margin-top:-20px;}
 
 /* Distress box */
 #distress-box{border:1px solid rgba(128,128,128,.2);border-top:2px solid var(--warn);background:var(--bg);width:400px;padding:24px;text-align:center;font-family:var(--fnt2);pointer-events:all;}
 #distress-box h2{color:var(--warn);font-family:var(--fnt);font-size:14px;letter-spacing:.3em;margin-bottom:10px;}
-#distress-box p{font-size:11px;margin-bottom:16px;line-height:1.7;color:rgba(0,0,0,.6);}
-.dbtn{border:1px solid rgba(0,0,0,.2);background:transparent;color:var(--warn);font-family:var(--fnt2);font-size:12px;padding:9px 22px;cursor:pointer;letter-spacing:.15em;margin:4px;}
-.dbtn:hover{background:rgba(0,0,0,.04);}
-.dbtn.er{border-color:rgba(160,0,0,.35);color:var(--danger);}
+#distress-box p{font-size:11px;margin-bottom:16px;line-height:1.7;color:var(--ink2);}
+.dbtn{border:1px solid rgba(128,128,128,.2);background:transparent;color:var(--warn);font-family:var(--fnt2);font-size:12px;padding:9px 22px;cursor:pointer;letter-spacing:.15em;margin:4px;}
+.dbtn:hover{background:rgba(128,128,128,.07);}
+.dbtn.er{border-color:rgba(160,0,0,.45);color:var(--danger);}
 
 /* Death screen */
 #death-screen h1{font-family:var(--fnt);color:var(--danger);font-size:42px;letter-spacing:.5em;margin-bottom:12px;font-weight:700;}
@@ -238,11 +238,11 @@ body{
 #joystick-base{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.03);}
 #joystick-knob{position:absolute;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.1);border:1px solid rgba(0,0,0,.3);left:36px;top:36px;}
 #touch-btns{position:fixed;bottom:60px;right:20px;z-index:20;display:none;flex-direction:column;gap:8px;align-items:flex-end;}
-.tch-btn{background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.2);color:rgba(0,0,0,.7);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:10px 14px;cursor:pointer;touch-action:none;}
+.tch-btn{background:var(--panel);border:1px solid rgba(128,128,128,.25);color:var(--ink2);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:10px 14px;cursor:pointer;touch-action:none;}
 .tch-btn.active{background:rgba(0,0,0,.1);border-color:var(--ink);color:var(--ink);}
 .tch-row{display:flex;gap:8px;}
-#btn-pause-touch{position:fixed;top:14px;right:14px;background:rgba(245,243,238,.9);border:1px solid rgba(0,0,0,.15);color:rgba(0,0,0,.5);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:7px 14px;z-index:20;display:none;cursor:pointer;}
-#btn-map-touch{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:rgba(245,243,238,.85);border:1px solid rgba(0,0,0,.12);color:rgba(0,0,0,.45);font-family:var(--fnt2);font-size:8px;letter-spacing:.2em;padding:5px 14px;z-index:20;display:none;cursor:pointer;}
+#btn-pause-touch{position:fixed;top:14px;right:14px;background:var(--panel);border:1px solid rgba(128,128,128,.2);color:var(--ink3);font-family:var(--fnt2);font-size:9px;letter-spacing:.2em;padding:7px 14px;z-index:20;display:none;cursor:pointer;}
+#btn-map-touch{position:fixed;bottom:0;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid rgba(128,128,128,.15);color:var(--ink3);font-family:var(--fnt2);font-size:8px;letter-spacing:.2em;padding:5px 14px;z-index:20;display:none;cursor:pointer;}
 @media(pointer:coarse){
   #joystick-zone,#touch-btns,#btn-pause-touch,#btn-map-touch{display:flex;}
   #hp-log{display:none;}
@@ -251,7 +251,7 @@ body{
 /* Stranded modal */
 #sbox{border:1px solid rgba(128,128,128,.2);background:var(--bg);width:440px;padding:24px;font-size:11px;color:var(--ink2);pointer-events:all;text-align:center;}
 #sbox h2{font-family:var(--fnt);font-size:12px;letter-spacing:.3em;color:var(--ink);margin-bottom:6px;}
-#sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:rgba(0,0,0,.55);}
+#sbox p{font-size:11px;line-height:1.7;margin-bottom:14px;color:var(--ink2);}
 
 /* ── Speed Mode HUD ── */
 #speed-mode-hud{
@@ -286,29 +286,29 @@ body{
 #hyperdrive-box{
   border:1px solid rgba(0,0,0,.2);border-top:2px solid var(--accent);
   background:var(--bg);width:520px;max-height:80vh;overflow-y:auto;padding:24px;
-  font-family:var(--fnt2);font-size:12px;color:rgba(0,0,0,.65);
+  font-family:var(--fnt2);font-size:12px;color:var(--ink2);
   pointer-events:all;
   clip-path:polygon(0 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%);
 }
 #hyperdrive-box h2{font-family:var(--fnt);font-size:13px;letter-spacing:.35em;color:var(--accent);margin-bottom:4px;font-weight:500;}
-#hyperdrive-box .hd-sub{font-size:10px;color:rgba(0,0,0,.35);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(0,0,0,.08);padding-bottom:10px;}
+#hyperdrive-box .hd-sub{font-size:10px;color:var(--ink3);letter-spacing:.2em;margin-bottom:16px;border-bottom:1px solid rgba(128,128,128,.15);padding-bottom:10px;}
 #hyperdrive-box .hd-fuel-warn{
   font-size:11px;color:var(--warn);letter-spacing:.1em;margin-bottom:14px;
   border:1px solid rgba(200,100,0,.25);padding:8px 12px;background:rgba(200,100,0,.04);
 }
 .hd-dest{
   display:grid;grid-template-columns:1fr 90px 80px;gap:8px;align-items:center;
-  border:1px solid rgba(128,128,128,.1);padding:10px 12px;margin-bottom:6px;cursor:pointer;
+  border:1px solid rgba(128,128,128,.15);padding:10px 12px;margin-bottom:6px;cursor:pointer;
   transition:border-color .15s,background .15s;font-size:11px;
 }
 .hd-dest:hover{border-color:var(--accent);background:rgba(var(--accent-rgb),.03);}
 .hd-dest .hd-name{color:var(--ink);font-family:var(--fnt);font-size:9px;letter-spacing:.25em;}
-.hd-dest .hd-dist{color:rgba(0,0,0,.4);font-size:10px;}
+.hd-dest .hd-dist{color:var(--ink3);font-size:10px;}
 .hd-dest .hd-jump{color:var(--accent);font-size:10px;text-align:right;}
 .hd-dest.no-fuel{opacity:.4;cursor:not-allowed;}
-.hd-dest.no-fuel:hover{border-color:rgba(0,0,0,.1);background:transparent;}
-#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(0,0,0,.12);background:transparent;color:rgba(0,0,0,.35);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
-#hyperdrive-close:hover{background:rgba(0,0,0,.04);}
+.hd-dest.no-fuel:hover{border-color:rgba(128,128,128,.15);background:transparent;}
+#hyperdrive-close{margin-top:16px;width:100%;border:1px solid rgba(128,128,128,.18);background:transparent;color:var(--ink3);font-family:var(--fnt2);font-size:11px;padding:9px;cursor:pointer;letter-spacing:.25em;}
+#hyperdrive-close:hover{background:rgba(128,128,128,.07);}
 
 /* ── Trajectory Warning ── */
 #traj-warning{
@@ -523,44 +523,44 @@ body{
   <h2 id="trade-title">DOCKING INTERFACE</h2>
   <div class="trow th"><span>COMMODITY</span><span>STOCK</span><span>BUY/u</span><span>SELL/u</span><span>OWNED</span><span></span></div>
   <div id="trade-rows"></div>
-  <div style="margin-top:12px;font-size:10px;color:rgba(0,0,0,.35)">
+  <div style="margin-top:12px;font-size:10px;color:var(--ink3)">
     FUEL: <span id="fuel-cost-label">–</span>
     <button class="tbtn" id="btn-refuel" style="margin-left:8px">REFUEL</button>
     &nbsp; HULL: <span id="repair-cost-label">–</span>
     <button class="tbtn" id="btn-repair" style="margin-left:8px">REPAIR</button>
   </div>
-  <div style="margin-top:6px;font-size:10px;color:rgba(0,0,0,.35)">
+  <div style="margin-top:6px;font-size:10px;color:var(--ink3)">
     SHIELD: <span id="shield-cost-label">5,000 CR</span>
     <button class="tbtn" id="btn-shield">INSTALL</button>
   </div>
   <div id="bounty-area" style="display:none;margin-top:10px;">
-    <div style="font-size:9px;color:rgba(0,0,0,.35);letter-spacing:.25em;border-top:1px solid rgba(0,0,0,.1);padding-top:8px;font-family:var(--fnt)">★ BOUNTY BOARD</div>
-    <div id="bounty-text" style="font-size:10px;color:rgba(0,0,0,.45);margin-top:6px;line-height:1.7"></div>
+    <div style="font-size:9px;color:var(--ink3);letter-spacing:.25em;border-top:1px solid rgba(128,128,128,.15);padding-top:8px;font-family:var(--fnt)">★ BOUNTY BOARD</div>
+    <div id="bounty-text" style="font-size:10px;color:var(--ink2);margin-top:6px;line-height:1.7"></div>
     <button class="tbtn" id="btn-bounty" style="margin-top:6px">ACCEPT BOUNTY</button>
   </div>
   <div id="contract-panel">
     <h3>DELIVERY CONTRACTS</h3>
     <div id="contract-list"></div>
-    <button id="btn-cancel-contract" style="display:none;margin-top:10px;width:100%;padding:8px;border:1px solid rgba(200,0,0,.35);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:10px;letter-spacing:.1em;cursor:pointer">[ CANCEL ACTIVE CONTRACT ]</button>
+    <button id="btn-cancel-contract" style="display:none;margin-top:10px;width:100%;padding:8px;border:1px solid rgba(200,0,0,.45);background:transparent;color:var(--danger);font-family:var(--fnt2);font-size:10px;letter-spacing:.1em;cursor:pointer">[ CANCEL ACTIVE CONTRACT ]</button>
   </div>
   <button id="trade-close">[ UNDOCK ]</button>
 </div></div>
 
 <div id="distress-modal"><div id="distress-box">
   <h2>⚠ FUEL DEPLETED</h2>
-  <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:rgba(0,0,0,.4)">Caution: signal attracts hostiles.</span></p>
+  <p>Drives silent. Drifting in void.<br>Transmitting emergency beacon…<br><span style="color:var(--ink3)">Caution: signal attracts hostiles.</span></p>
   <button class="dbtn" id="btn-distress">SEND DISTRESS SIGNAL</button>
   <button class="dbtn er" id="btn-drift">DRIFT (risky)</button>
 </div></div>
 
 <div id="stranded-modal"><div id="sbox">
   <h2>⚠ DISTRESS BEACON</h2>
-  <div style="font-size:9px;color:rgba(0,0,0,.3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
+  <div style="font-size:9px;color:var(--ink3);letter-spacing:.25em;margin-bottom:12px">VESSEL: <span id="stranded-name">UNKNOWN</span></div>
   <p>A stranded merchant requests assistance. Drive failure detected.</p>
   <button class="tbtn" id="btn-help-parts"  style="display:block;width:100%;margin:5px 0;padding:8px">[ DELIVER PARTS · 5× PARTS → +1,500 CR ]</button>
   <button class="tbtn" id="btn-help-escort" style="display:block;width:100%;margin:5px 0;padding:8px">[ ESCORT TO STATION → +2,000 CR ]</button>
   <button class="tbtn sell" id="btn-loot"   style="display:block;width:100%;margin:5px 0;padding:8px;border-color:rgba(255,85,85,.35);color:var(--danger)">[ LOOT (−karma) ]</button>
-  <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(0,0,0,.1);color:rgba(0,0,0,.25)">[ IGNORE ]</button>
+  <button class="tbtn" id="btn-strand-leave" style="display:block;width:100%;margin-top:10px;padding:8px;border-color:rgba(128,128,128,.2);color:var(--ink3)">[ IGNORE ]</button>
 </div></div>
 
 <div id="death-screen">
@@ -1272,7 +1272,7 @@ function openHyperdriveMenu() {
   const stations = [homeStation, ...Array.from(stCache.values()).filter(s => s && s.discovered && s !== homeStation)];
 
   if (stations.length <= 1) {
-    destList.innerHTML = '<div style="color:rgba(0,0,0,.35);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
+    destList.innerHTML = '<div style="color:var(--ink3);font-size:11px;padding:10px 0">No discovered stations available. Explore first.</div>';
   } else {
     stations.forEach(st => {
       if (!st) return;
@@ -1753,10 +1753,10 @@ function tryDock() {
     const bt = document.getElementById('bounty-text');
     const bb = document.getElementById('btn-bounty');
     if (bountyAccepted) {
-      bt.innerHTML = 'Active hunt: <span style="color:#000">ALIEN PRESENCE</span><br>Reward: ' + bountyReward + ' CR';
+      bt.innerHTML = 'Active hunt: <span style="color:var(--ink)">ALIEN PRESENCE</span><br>Reward: ' + bountyReward + ' CR';
       bb.style.display = 'none';
     } else {
-      bt.innerHTML = 'Hunt the alien terrorising this sector.<br>Cost: <span style="color:#000">2,000 CR</span> · Reward: <span style="color:#000">15,000 CR</span>';
+      bt.innerHTML = 'Hunt the alien terrorising this sector.<br>Cost: <span style="color:var(--ink)">2,000 CR</span> · Reward: <span style="color:var(--ink)">15,000 CR</span>';
       bb.style.display = 'inline-block';
     }
   }
@@ -2285,7 +2285,7 @@ function buildContractPanel(st) {
     const d = document.createElement('div');
     d.className = 'cjob active';
     d.innerHTML = `<div class="cname" style="color:var(--accent)">★ ACTIVE DELIVERY</div>
-      <div class="cinfo">Deliver ${activeContract.qty}× ${activeContract.good} to <span style="color:#000">${activeContract.to}</span></div>
+      <div class="cinfo">Deliver ${activeContract.qty}× ${activeContract.good} to <span style="color:var(--ink)">${activeContract.to}</span></div>
       <div class="crew" style="color:var(--accent)">+${activeContract.reward.toLocaleString()} CR</div>`;
     el.appendChild(d);
   }
@@ -2298,7 +2298,7 @@ function buildContractPanel(st) {
       const canDo  = myQty >= c.qty;
       const div    = document.createElement('div');
       div.className = 'cjob' + (canDo ? '' : ' dim');
-      div.innerHTML = `<div class="cname">${c.from} → <span style="color:#000">${c.to}</span></div>
+      div.innerHTML = `<div class="cname">${c.from} → <span style="color:var(--ink)">${c.to}</span></div>
         <div class="cinfo">Deliver ${c.qty}× ${c.good} &nbsp;·&nbsp; ${fmtDist(c.dist)} &nbsp;·&nbsp; Have: ${myQty}</div>
         <span class="crew">+${c.reward.toLocaleString()} CR</span>`;
       div.style.cursor = 'pointer';
@@ -2327,7 +2327,7 @@ function drawContractNav() {
   ctx.save(); ctx.translate(ix, iy); ctx.rotate(ang + Math.PI/2);
   ctx.beginPath(); ctx.moveTo(0,-20); ctx.lineTo(16,12); ctx.lineTo(-16,12); ctx.closePath();
   ctx.fillStyle = wa(PAL.accent, pulse); ctx.fill();
-  ctx.fillStyle = '#f5f3ee'; ctx.font = 'bold 13px Share Tech Mono'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = PAL.bg; ctx.font = 'bold 13px Share Tech Mono'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('◆', 0, 0);
   ctx.restore();
   ctx.textBaseline = 'alphabetic';
