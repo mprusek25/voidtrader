@@ -1483,6 +1483,13 @@ document.getElementById('btn-respawn').addEventListener('click', () => {
 // ── ## STATIONS ──────────────────────────────────────────────────────────────
 
 const ST_NAMES = ['ALPHA','BETA','GAMMA','DELTA','EPSILON','VEGA','SIRIUS','LYRA','CYGNUS','ORION','KEPLER','HAVEN','NEXUS','VOID','EDGE','DRIFT','NOVA','PULSAR','QUASAR','ZENITH','ARES','TITAN','KRONOS','HERMES'];
+
+// ── Station types & their docking flavours ──
+// 'torus'    – Orbital Ring/Torus: dock at central hub axis (zero-speed proximity to centre)
+// 'citadel'  – Megastructure Citadel: flat magnetic pads, strict speed limit
+// 'outpost'  – Modular Outpost: single glowing docking arm extending from cluster
+// 'asteroid' – Asteroid-Hollowed: internal hangar, fly through open door
+const ST_TYPES = ['torus','citadel','outpost','asteroid'];
 const GOODS = ['ORE','TECH','FOOD','MEDS','PARTS'];
 const GOODS_BASE = { ORE:45, TECH:220, FOOD:8, MEDS:90, PARTS:130 };
 
@@ -1516,11 +1523,43 @@ function getStation(cx, cy) {
     }
     const isBounty = rng() < .15;
     if (isBounty) inv['ALIEN-TECH'] = { qty:0, price:1200 };
+
+    // Pick station type deterministically from RNG
+    const stType = ST_TYPES[Math.floor(rng()*ST_TYPES.length)];
+    const baseR  = 120 + rng()*80;
+
+    // Build type-specific module seeds for outpost procedural layout
+    let moduleSeeds = null;
+    if (stType === 'outpost') {
+      const mc = 4 + Math.floor(rng()*5);
+      moduleSeeds = Array.from({length:mc}, () => ({
+        angle: rng()*Math.PI*2,
+        dist:  baseR*(0.6 + rng()*0.8),
+        size:  baseR*(0.15 + rng()*0.2),
+        kind:  Math.floor(rng()*3),
+      }));
+    }
+
+    // Asteroid bump seeds for organic silhouette
+    let asteroidBumps = null;
+    if (stType === 'asteroid') {
+      const bc = 9 + Math.floor(rng()*7);
+      asteroidBumps = Array.from({length:bc}, () => ({
+        a: rng()*Math.PI*2,
+        r: 0.7 + rng()*0.55,
+      }));
+    }
+
     stCache.set(key, {
       x:(cx + rng()*.7 + .15)*CFG.CHUNK,
       y:(cy + rng()*.7 + .15)*CFG.CHUNK,
-      name:nm, radius:120+rng()*80, rotation:0, rotSpeed:(rng()-.5)*.4,
+      name:nm, radius:baseR, rotation:0,
+      rotSpeed: stType==='torus' ? (0.18 + rng()*0.12) * (rng()<.5?1:-1)
+               : stType==='citadel' ? 0
+               : (rng()-.5)*.4,
+      stationType: stType,
       platforms:[{localAngle:0},{localAngle:Math.PI/2},{localAngle:Math.PI},{localAngle:Math.PI*1.5}],
+      moduleSeeds, asteroidBumps,
       inv, discovered:false, isBounty, key, regenTimer:{},
     });
   }
@@ -1559,49 +1598,151 @@ let distressSent = false, fuelEmptyTimer = 0;
 
 const dockingInfo = { st:null, padD:Infinity, padWorldX:0, padWorldY:0, shipSpd:0 };
 
-function getPadPositions(st) {
+// Returns the world-space centre of a station's body (accounting for orbit)
+function getStationBody(st) {
   const isOrbiting = !st.isHome && !st.isBounty;
   const orbitDist  = isOrbiting ? st.radius * 9 : 0;
-  const stRot   = isOrbiting ? st.rotation*3 : st.rotation*2;
-  const stCx    = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
-  const stCy    = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
-  const padDist = st.radius * 0.55;
-  return (st.platforms || []).map(p => {
-    const a = stRot + p.localAngle;
-    return { wx: stCx + Math.cos(a)*padDist, wy: stCy + Math.sin(a)*padDist };
-  });
+  return {
+    cx: isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x,
+    cy: isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y,
+    rot: isOrbiting ? st.rotation*3 : st.rotation*2,
+  };
+}
+
+// Returns docking target(s) for each station type as { wx, wy, mechanic, hint }
+// mechanic: 'pad'|'hub'|'arm'|'hangar'
+function getPadPositions(st) {
+  const { cx, cy, rot } = getStationBody(st);
+
+  // Home station keeps legacy 4-pad layout
+  if (st.isHome || !st.stationType) {
+    const padDist = st.radius * 0.55;
+    return (st.platforms || []).map(p => {
+      const a = rot + p.localAngle;
+      return { wx: cx + Math.cos(a)*padDist, wy: cy + Math.sin(a)*padDist, mechanic:'pad' };
+    });
+  }
+
+  const r = st.radius;
+  switch (st.stationType) {
+
+    case 'torus': {
+      // Central hub: single dock point at structure centre
+      return [{ wx: cx, wy: cy, mechanic:'hub',
+                hint:'ALIGN WITH CENTRAL HUB — ZERO SPEED TO DOCK' }];
+    }
+
+    case 'citadel': {
+      // Three flat magnetic pads on the hexagon's faces, rotating with structure
+      const pads = [];
+      for (let i = 0; i < 3; i++) {
+        const a = rot + (i/3)*Math.PI*2 + Math.PI/6;
+        pads.push({ wx: cx + Math.cos(a)*r*0.92,
+                    wy: cy + Math.sin(a)*r*0.92,
+                    mechanic:'pad',
+                    hint:'APPROACH MAGNETIC PAD — SLOW SPEED REQUIRED' });
+      }
+      return pads;
+    }
+
+    case 'outpost': {
+      // Single docking arm extending from the first module
+      if (!st.moduleSeeds || !st.moduleSeeds.length) return [];
+      const m0 = st.moduleSeeds[0];
+      const armAngle = rot + m0.angle;
+      const armTip = r * 1.55; // arm extends beyond module
+      return [{ wx: cx + Math.cos(armAngle)*armTip,
+                wy: cy + Math.sin(armAngle)*armTip,
+                mechanic:'arm',
+                hint:'DOCK WITH UMBILICAL ARM PORT [E]' }];
+    }
+
+    case 'asteroid': {
+      // Hangar interior: dock point deep inside the asteroid body
+      return [{ wx: cx, wy: cy, mechanic:'hangar',
+                hint:'FLY INTO HANGAR — REDUCE SPEED [S]' }];
+    }
+
+    default: {
+      const padDist = r * 0.55;
+      return (st.platforms || []).map(p => {
+        const a = rot + p.localAngle;
+        return { wx: cx + Math.cos(a)*padDist, wy: cy + Math.sin(a)*padDist, mechanic:'pad' };
+      });
+    }
+  }
 }
 
 function updateDockingInfo() {
-  dockingInfo.st = null;
-  dockingInfo.padD = Infinity;
-  dockingInfo.shipSpd = Math.hypot(ship.vx, ship.vy);
+  dockingInfo.st       = null;
+  dockingInfo.padD     = Infinity;
+  dockingInfo.shipSpd  = Math.hypot(ship.vx, ship.vy);
+  dockingInfo.mechanic = 'pad';
+  dockingInfo.hint     = '';
   for (const st of allNearby()) {
     if (!st) continue;
-    if (Math.hypot(ship.x-st.x, ship.y-st.y) > st.radius*15) continue;
+    if (Math.hypot(ship.x-st.x, ship.y-st.y) > st.radius*20) continue;
     for (const pad of getPadPositions(st)) {
       const d = Math.hypot(ship.x - pad.wx, ship.y - pad.wy);
       if (d < dockingInfo.padD) {
-        dockingInfo.padD = d;
-        dockingInfo.padWorldX = pad.wx;
-        dockingInfo.padWorldY = pad.wy;
-        dockingInfo.st = st;
+        dockingInfo.padD     = d;
+        dockingInfo.padWorldX= pad.wx;
+        dockingInfo.padWorldY= pad.wy;
+        dockingInfo.st       = st;
+        dockingInfo.mechanic = pad.mechanic || 'pad';
+        dockingInfo.hint     = pad.hint || '';
       }
     }
   }
 }
 
+function getDockThresholds(st) {
+  // Per-type dock radius and max speed
+  const type = st.stationType || 'legacy';
+  switch (type) {
+    case 'torus':    return { r: CFG.DOCK_PAD_R * 1.4, maxSpd:  8 }; // must nearly stop at hub
+    case 'citadel':  return { r: CFG.DOCK_PAD_R,       maxSpd: 12 }; // tight speed control
+    case 'outpost':  return { r: CFG.DOCK_PAD_R * 1.2, maxSpd: 25 }; // flexible arm
+    case 'asteroid': return { r: st.radius * 0.55,     maxSpd: 30 }; // just be inside hangar
+    default:         return { r: CFG.DOCK_PAD_R,       maxSpd: CFG.DOCK_MAX_SPD };
+  }
+}
+
 function tryDock() {
   if (modalOpen()) return;
-  const { st, padD, shipSpd } = dockingInfo;
-  if (!st || padD > CFG.DOCK_PAD_R) { addLog('Not aligned with any docking pad'); return; }
-  if (shipSpd > CFG.DOCK_MAX_SPD)   { addLog('Speed too high! Slow down to dock.'); return; }
+  const { st, padD, shipSpd, mechanic } = dockingInfo;
+  if (!st) { addLog('Not near any docking station'); return; }
+
+  const { r: dockR, maxSpd: dockSpd } = getDockThresholds(st);
+
+  // Type-specific pre-dock checks
+  if (st.stationType === 'torus') {
+    if (padD > dockR)    { addLog('Torus Hub: Align with the central rotation axis'); return; }
+    if (shipSpd > dockSpd){ addLog('Torus Hub: Speed critical — match hub rotation (slow to ' + dockSpd + ')'); return; }
+  } else if (st.stationType === 'citadel') {
+    if (padD > dockR)    { addLog('Citadel: No magnetic pad in range — approach a flat face'); return; }
+    if (shipSpd > dockSpd){ addLog('Citadel: Too fast for magnetic latch — brake to ' + dockSpd + ' ls/s'); return; }
+  } else if (st.stationType === 'outpost') {
+    if (padD > dockR)    { addLog('Outpost: Locate the glowing docking arm port'); return; }
+    if (shipSpd > dockSpd){ addLog('Outpost: Slow down for umbilical connection'); return; }
+  } else if (st.stationType === 'asteroid') {
+    // Hangar: player must be inside the asteroid body radius
+    const { cx, cy } = getStationBody(st);
+    const distToCore = Math.hypot(ship.x - cx, ship.y - cy);
+    if (distToCore > st.radius * 0.6) { addLog('Asteroid: Fly through the hangar door into the interior'); return; }
+    if (shipSpd > dockSpd)            { addLog('Asteroid Hangar: Reduce speed inside the hangar'); return; }
+  } else {
+    // Legacy / home station
+    if (padD > CFG.DOCK_PAD_R)      { addLog('Not aligned with any docking pad'); return; }
+    if (shipSpd > CFG.DOCK_MAX_SPD) { addLog('Speed too high! Slow down to dock.'); return; }
+  }
 
   st.discovered = true;
   if (st.key) discovered.add(st.key);
   dockedSt = st;
 
-  document.getElementById('trade-title').textContent = 'DOCKED · ' + st.name.toUpperCase();
+  const typeLabel = st.stationType ? ' [' + st.stationType.toUpperCase() + ']' : '';
+  document.getElementById('trade-title').textContent = 'DOCKED · ' + st.name.toUpperCase() + typeLabel;
   buildRows(st);
   updateFuelLabel(st); updateRepairLabel(st); updateShieldLabel();
   checkContractDelivery(st);
@@ -1620,7 +1761,7 @@ function tryDock() {
     }
   }
 
-  addLog('Docked at ' + st.name);
+  addLog('Docked at ' + st.name + (st.stationType ? ' (' + st.stationType + ')' : ''));
   if (cargoTotal() === 0 && Object.keys(ship.cargo).length === 0) {
     addLog('TIP: Buy cargo here, then accept contracts to other stations');
   }
@@ -1636,10 +1777,334 @@ function checkFuel(dt) {
   }
 }
 
+// ── Station drawing helpers ──────────────────────────────────────────────────
+
+function _drawDockingHint(st, scx, scy) {
+  if (dockingInfo.st !== st) return;
+  const { padD, shipSpd, mechanic, hint } = dockingInfo;
+  const r = st.radius;
+  const { r: dockR, maxSpd: dockSpd } = getDockThresholds(st);
+  ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
+
+  // Asteroid hangar uses a different distance measure
+  let effectivePadD = padD;
+  if (st.stationType === 'asteroid') {
+    const { cx, cy } = getStationBody(st);
+    effectivePadD = Math.hypot(ship.x - cx, ship.y - cy);
+  }
+
+  if (effectivePadD < dockR) {
+    if (shipSpd > dockSpd) {
+      ctx.fillStyle = PAL.warn; ctx.fillText('SPEED TOO HIGH — BRAKE [S]', scx, scy + r + 18);
+    } else {
+      ctx.fillStyle = PAL.safe; ctx.fillText('◆ ALIGNED · [E] DOCK', scx, scy + r + 18);
+    }
+  } else if (effectivePadD < r * 3.5) {
+    ctx.fillStyle = wa(PAL.ink3, .85);
+    ctx.fillText(hint || 'APPROACH DOCKING POINT', scx, scy + r + 17);
+  }
+}
+
+function _stationLabel(st, scx, scy) {
+  const lbl = (st.isBounty?'★ ':'') + (st.isHome ? 'HOME STATION' : st.name);
+  const typeSuffix = st.stationType ? ' · ' + st.stationType.toUpperCase() : '';
+  ctx.font = '500 10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
+  ctx.fillText(lbl + typeSuffix, scx, scy - st.radius - 14);
+
+  if (activeContract && activeContract.to === st.name) {
+    const pulse = .5 + .5*Math.sin(Date.now()*.005);
+    ctx.beginPath(); ctx.arc(scx, scy, st.radius+20, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.accent, pulse*.6); ctx.lineWidth = 1;
+    ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, .9); ctx.textAlign = 'center';
+    ctx.fillText('▼ DESTINATION', scx, scy - st.radius - 26);
+  }
+}
+
+// ── Type 0: Torus / Orbital Ring ─────────────────────────────────────────────
+function drawStationTorus(st, scx, scy, stRot) {
+  const r = st.radius;
+  const now = Date.now() * 0.001;
+
+  // Outer ring (rotates fast to simulate gravity)
+  const ringRot = now * st.rotSpeed * 3;
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(ringRot);
+
+  // Ring body
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = r*0.22; ctx.stroke();
+  // Inner edge of ring
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.strokeStyle = wa(PAL.ink, .04); ctx.lineWidth = r*0.17; ctx.stroke();
+  // Structural segments on ring
+  for (let i = 0; i < 12; i++) {
+    const a = (i/12)*Math.PI*2;
+    const rx1 = Math.cos(a)*(r - r*0.1), ry1 = Math.sin(a)*(r - r*0.1);
+    const rx2 = Math.cos(a)*(r + r*0.1), ry2 = Math.sin(a)*(r + r*0.1);
+    ctx.beginPath(); ctx.moveTo(rx1, ry1); ctx.lineTo(rx2, ry2);
+    ctx.strokeStyle = wa(PAL.ink, .5); ctx.lineWidth = 1.2; ctx.stroke();
+  }
+  // Spoke struts connecting ring to hub
+  for (let i = 0; i < 6; i++) {
+    const a = (i/6)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*r*0.88, Math.sin(a)*r*0.88);
+    ctx.lineTo(Math.cos(a)*r*0.18, Math.sin(a)*r*0.18);
+    ctx.strokeStyle = wa(PAL.ink, .55); ctx.lineWidth = 1.4; ctx.stroke();
+  }
+  ctx.restore();
+
+  // Central hub (counter-rotates slightly)
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(-ringRot * 0.4);
+  // Hub body
+  ctx.beginPath(); ctx.arc(0, 0, r*0.18, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .08); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .9); ctx.lineWidth = 2.2; ctx.stroke();
+  // Hub cross detail
+  for (let i = 0; i < 4; i++) {
+    const a = (i/4)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*r*0.13, Math.sin(a)*r*0.13);
+    ctx.strokeStyle = wa(PAL.ink, .45); ctx.lineWidth = 1; ctx.stroke();
+  }
+  // Docking beacon pulse on hub
+  const pulse = 0.4 + 0.6*Math.abs(Math.sin(now*2.5));
+  ctx.beginPath(); ctx.arc(0, 0, r*0.08, 0, Math.PI*2);
+  ctx.strokeStyle = wa(PAL.safe, pulse); ctx.lineWidth = 1.8; ctx.stroke();
+  ctx.font = `bold ${Math.max(6, r*0.07)}px Orbitron`; ctx.fillStyle = wa(PAL.safe, .8); ctx.textAlign = 'center';
+  ctx.fillText('HUB', 0, r*0.28);
+  ctx.restore();
+}
+
+// ── Type 1: Citadel (Hexagonal / Pyramidal) ──────────────────────────────────
+function drawStationCitadel(st, scx, scy, stRot) {
+  const r = st.radius;
+  const now = Date.now() * 0.001;
+
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+
+  // Main hexagonal body
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i/6)*Math.PI*2 - Math.PI/6;
+    const px = Math.cos(a)*r, py = Math.sin(a)*r;
+    if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .05); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .9); ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Inner hex (pyramidal depth illusion)
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i/6)*Math.PI*2 - Math.PI/6;
+    const px = Math.cos(a)*r*0.6, py = Math.sin(a)*r*0.6;
+    if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .07); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .45); ctx.lineWidth = 1.2; ctx.stroke();
+
+  // Lines from inner to outer vertices (pyramid face edges)
+  for (let i = 0; i < 6; i++) {
+    const a  = (i/6)*Math.PI*2 - Math.PI/6;
+    const a2 = ((i+0.5)/6)*Math.PI*2 - Math.PI/6;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*r*0.6, Math.sin(a)*r*0.6);
+    ctx.lineTo(Math.cos(a)*r,     Math.sin(a)*r);
+    ctx.strokeStyle = wa(PAL.ink, .3); ctx.lineWidth = .8; ctx.stroke();
+    // Mid-face detail
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a2)*r*0.6, Math.sin(a2)*r*0.6);
+    ctx.lineTo(Math.cos(a2)*r*0.9, Math.sin(a2)*r*0.9);
+    ctx.strokeStyle = wa(PAL.ink, .2); ctx.lineWidth = .6; ctx.stroke();
+  }
+
+  // Core node
+  ctx.beginPath(); ctx.arc(0, 0, r*0.12, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .7); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, 0, r*0.06, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.accent, .9); ctx.fill();
+
+  // Magnetic pads on 3 alternate hex faces, pulsing
+  const padPulse = 0.5 + 0.5*Math.abs(Math.sin(now*1.8));
+  for (let i = 0; i < 3; i++) {
+    const a = (i/3)*Math.PI*2 + Math.PI/6 - Math.PI/6;
+    const px = Math.cos(a)*r*0.92, py = Math.sin(a)*r*0.92;
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a);
+    ctx.beginPath(); ctx.rect(-r*0.14, -r*0.05, r*0.28, r*0.1);
+    ctx.fillStyle = wa(PAL.safe, .1*padPulse); ctx.fill();
+    ctx.strokeStyle = wa(PAL.safe, .8*padPulse); ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = `${Math.max(5,r*0.07)}px Orbitron`; ctx.fillStyle = wa(PAL.safe, .9); ctx.textAlign='center';
+    ctx.fillText('MAG', 0, -r*0.08);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ── Type 2: Modular Outpost ───────────────────────────────────────────────────
+function drawStationOutpost(st, scx, scy, stRot) {
+  const r = st.radius;
+  const now = Date.now() * 0.001;
+  const mods = st.moduleSeeds || [];
+
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+
+  // Central hub module
+  ctx.beginPath(); ctx.arc(0, 0, r*0.25, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .07); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, r*0.1, 0, Math.PI*2);
+  ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
+
+  // Draw connecting trusses + modules
+  mods.forEach((m, mi) => {
+    const mx = Math.cos(m.angle)*m.dist;
+    const my = Math.sin(m.angle)*m.dist;
+    // Truss strut
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(mx, my);
+    ctx.strokeStyle = wa(PAL.ink, .35); ctx.lineWidth = 1; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+
+    ctx.save(); ctx.translate(mx, my); ctx.rotate(m.angle);
+
+    if (m.kind === 0) {
+      // Rectangular module
+      ctx.beginPath(); ctx.rect(-m.size, -m.size*.6, m.size*2, m.size*1.2);
+      ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
+      ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = 1.4; ctx.stroke();
+      // Window row
+      for (let w = 0; w < 3; w++) {
+        ctx.beginPath(); ctx.rect(-m.size*.6 + w*m.size*.5, -m.size*.2, m.size*.25, m.size*.35);
+        ctx.fillStyle = wa(PAL.accent, .15); ctx.fill();
+        ctx.strokeStyle = wa(PAL.ink, .3); ctx.lineWidth = .6; ctx.stroke();
+      }
+    } else if (m.kind === 1) {
+      // Cylindrical module (oval)
+      ctx.beginPath(); ctx.ellipse(0, 0, m.size*.7, m.size, 0, 0, Math.PI*2);
+      ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
+      ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = 1.3; ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, 0, m.size*.4, m.size*.7, 0, 0, Math.PI*2);
+      ctx.strokeStyle = wa(PAL.ink, .2); ctx.lineWidth = .6; ctx.stroke();
+    } else {
+      // Solar panel array
+      for (let p = -1; p <= 1; p += 2) {
+        ctx.beginPath(); ctx.rect(p*(m.size*.8), -m.size*.7, m.size*.75, m.size*1.4);
+        ctx.fillStyle = wa(PAL.ink, .08); ctx.fill();
+        ctx.strokeStyle = wa(PAL.ink, .5); ctx.lineWidth = 1; ctx.stroke();
+        // Panel grid
+        for (let row = 0; row < 3; row++) {
+          ctx.beginPath(); ctx.moveTo(p*(m.size*.8), -m.size*.7 + row*m.size*.47);
+          ctx.lineTo(p*(m.size*.8)+p*m.size*.75, -m.size*.7 + row*m.size*.47);
+          ctx.strokeStyle = wa(PAL.ink, .2); ctx.lineWidth = .5; ctx.stroke();
+        }
+      }
+      ctx.beginPath(); ctx.rect(-m.size*.2, -m.size*.2, m.size*.4, m.size*.4);
+      ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  // Docking arm from first module (glowing port at tip)
+  if (mods.length > 0) {
+    const m0 = mods[0];
+    const armLen = r * 0.55;
+    const ax1 = Math.cos(m0.angle)*m0.dist;
+    const ay1 = Math.sin(m0.angle)*m0.dist;
+    const ax2 = Math.cos(m0.angle)*(m0.dist + armLen);
+    const ay2 = Math.sin(m0.angle)*(m0.dist + armLen);
+    ctx.beginPath(); ctx.moveTo(ax1, ay1); ctx.lineTo(ax2, ay2);
+    ctx.strokeStyle = wa(PAL.ink, .7); ctx.lineWidth = 2.5; ctx.stroke();
+    // Umbilical tube ridges
+    for (let seg = 0; seg < 4; seg++) {
+      const t = (seg+1)/5;
+      const sx2 = ax1 + (ax2-ax1)*t, sy2 = ay1 + (ay2-ay1)*t;
+      const perp = m0.angle + Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(sx2 + Math.cos(perp)*5, sy2 + Math.sin(perp)*5);
+      ctx.lineTo(sx2 - Math.cos(perp)*5, sy2 - Math.sin(perp)*5);
+      ctx.strokeStyle = wa(PAL.ink, .4); ctx.lineWidth = 1; ctx.stroke();
+    }
+    // Glowing port beacon
+    const portPulse = 0.5 + 0.5*Math.abs(Math.sin(now*3));
+    ctx.beginPath(); ctx.arc(ax2, ay2, r*0.08, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.safe, .12*portPulse); ctx.fill();
+    ctx.strokeStyle = wa(PAL.safe, portPulse); ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = `bold ${Math.max(6,r*0.07)}px Orbitron`; ctx.fillStyle = wa(PAL.safe, .9); ctx.textAlign='center';
+    ctx.fillText('PORT', ax2, ay2 - r*0.12);
+  }
+
+  ctx.restore();
+}
+
+// ── Type 3: Asteroid-Hollowed Station ────────────────────────────────────────
+function drawStationAsteroid(st, scx, scy, stRot) {
+  const r = st.radius;
+  const now = Date.now() * 0.001;
+  const bumps = st.asteroidBumps || [];
+
+  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+
+  // Build asteroid silhouette path from bump seeds
+  ctx.beginPath();
+  const pts = bumps.map(b => ({
+    x: Math.cos(b.a)*r*b.r,
+    y: Math.sin(b.a)*r*b.r,
+  })).sort((a,b_) => Math.atan2(a.y,a.x) - Math.atan2(b_.y,b_.x));
+  if (pts.length > 0) {
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = wa(PAL.ink, .08); ctx.fill();
+  ctx.strokeStyle = wa(PAL.ink, .75); ctx.lineWidth = 2.5; ctx.stroke();
+
+  // Surface crack detail
+  for (let c = 0; c < 4; c++) {
+    const a = (c/4)*Math.PI*2 + 0.3;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*r*.25, Math.sin(a)*r*.25);
+    ctx.lineTo(Math.cos(a+0.15)*r*.55, Math.sin(a+0.15)*r*.55);
+    ctx.strokeStyle = wa(PAL.ink, .2); ctx.lineWidth = .7; ctx.stroke();
+  }
+
+  // Mechanical structures built into the rock: antenna + lights
+  ctx.beginPath(); ctx.moveTo(r*0.15, -r*0.55); ctx.lineTo(r*0.15, -r*0.8);
+  ctx.strokeStyle = wa(PAL.ink, .6); ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.beginPath(); ctx.arc(r*0.15, -r*0.8, r*0.04, 0, Math.PI*2);
+  const blinkPulse = 0.5 + 0.5*Math.sin(now*4);
+  ctx.fillStyle = wa(PAL.warn, blinkPulse); ctx.fill();
+
+  // Hangar door: a rectangular opening on one side (right side)
+  const doorW = r*0.28, doorH = r*0.2;
+  const doorX = r*0.62, doorY = -doorH/2;
+  // Hangar glow (interior)
+  const doorPulse = 0.3 + 0.15*Math.sin(now*1.5);
+  ctx.beginPath(); ctx.rect(doorX, doorY, doorW*0.7, doorH);
+  ctx.fillStyle = wa(PAL.safe, doorPulse); ctx.fill();
+  // Door frame
+  ctx.beginPath(); ctx.rect(doorX - 2, doorY - 2, doorW*0.7 + 4, doorH + 4);
+  ctx.strokeStyle = wa(PAL.ink, .8); ctx.lineWidth = 1.8; ctx.stroke();
+  // "HANGAR" label
+  ctx.font = `bold ${Math.max(5,r*0.065)}px Orbitron`;
+  ctx.fillStyle = wa(PAL.safe, .85); ctx.textAlign = 'center';
+  ctx.fillText('HANGAR', doorX + doorW*.35, doorY - r*0.07);
+
+  // Runway lights inside
+  for (let li = 0; li < 3; li++) {
+    const lx = doorX + (li+0.5)*doorW*0.7/3;
+    const lPulse = 0.4 + 0.6*Math.abs(Math.sin(now*2 + li*0.8));
+    ctx.beginPath(); ctx.arc(lx, 0, r*0.025, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.safe, lPulse); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ── Master drawStation dispatcher ────────────────────────────────────────────
 function drawStation(st) {
   if (!st) return;
   const sx = wx(st.x), sy = wy(st.y), r = st.radius;
-  if (sx<-1200||sx>canvas.width+1200||sy<-1200||sy>canvas.height+1200) return;
+  if (sx<-1400||sx>canvas.width+1400||sy<-1400||sy>canvas.height+1400) return;
 
   const isOrbiting = !st.isHome && !st.isBounty;
   const orbitDist  = isOrbiting ? r*9 : 0;
@@ -1656,10 +2121,8 @@ function drawStation(st) {
     ctx.setLineDash([3,8]); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  const stRot = isOrbiting ? st.rotation*3 : st.rotation*2;
-  const stCx  = isOrbiting ? st.x + Math.cos(st.rotation)*orbitDist : st.x;
-  const stCy  = isOrbiting ? st.y + Math.sin(st.rotation)*orbitDist : st.y;
-  const scx = wx(stCx), scy = wy(stCy);
+  const { cx, cy, rot: stRot } = getStationBody(st);
+  const scx = wx(cx), scy = wy(cy);
 
   if (isOrbiting) {
     ctx.beginPath(); ctx.arc(scx, scy, r*0.55, 0, Math.PI*2);
@@ -1667,85 +2130,70 @@ function drawStation(st) {
     ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = 1; ctx.stroke();
   }
 
-  ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
+  // Dispatch to type-specific renderer
+  const type = st.stationType;
+  if (!st.isHome && type === 'torus')    { drawStationTorus(st, scx, scy, stRot); }
+  else if (!st.isHome && type === 'citadel')  { drawStationCitadel(st, scx, scy, stRot); }
+  else if (!st.isHome && type === 'outpost')  { drawStationOutpost(st, scx, scy, stRot); }
+  else if (!st.isHome && type === 'asteroid') { drawStationAsteroid(st, scx, scy, stRot); }
+  else {
+    // Original home station / legacy rendering
+    ctx.save(); ctx.translate(scx, scy); ctx.rotate(stRot);
 
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
-  ctx.strokeStyle = wa(PAL.ink, .12); ctx.lineWidth = .8;
-  ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
-
-  for (let i = 0; i < 4; i++) {
-    const a = (i/4)*Math.PI*2;
-    const c = Math.cos(a), s = Math.sin(a);
-    ctx.beginPath(); ctx.moveTo(c*r*.22, s*r*.22); ctx.lineTo(c*r*.78, s*r*.78);
-    ctx.strokeStyle = wa(PAL.ink, .65); ctx.lineWidth = 1.4; ctx.stroke();
-    const tx = Math.cos(a+Math.PI/2)*5, ty = Math.sin(a+Math.PI/2)*5;
-    const px = c*r*.78, py = s*r*.78;
-    ctx.beginPath(); ctx.moveTo(px+tx,py+ty); ctx.lineTo(px,py); ctx.lineTo(px-tx,py-ty);
-    ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.4; ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(c*r*.4+tx*.4,s*r*.4+ty*.4); ctx.lineTo(c*r*.4-tx*.4,s*r*.4-ty*.4);
-    ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = .7; ctx.stroke();
-  }
-
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const a = (i/6)*Math.PI*2 - Math.PI/6;
-    const p = r*.22;
-    if (i===0) ctx.moveTo(Math.cos(a)*p, Math.sin(a)*p);
-    else        ctx.lineTo(Math.cos(a)*p, Math.sin(a)*p);
-  }
-  ctx.closePath();
-  ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
-  ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.3; ctx.stroke();
-  ctx.beginPath(); ctx.arc(0, 0, r*.07, 0, Math.PI*2);
-  ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
-
-  if (st.platforms) {
-    for (const p of st.platforms) {
-      ctx.save(); ctx.rotate(p.localAngle); ctx.translate(r*0.55, 0);
-      ctx.beginPath(); ctx.arc(0, 0, r*0.22, 0, Math.PI*2);
-      ctx.fillStyle = wa(PAL.safe, .06); ctx.fill();
-      ctx.strokeStyle = wa(PAL.safe, .7); ctx.lineWidth = 1.5;
-      ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
-      const hw = r*0.09, hh = r*0.12;
-      ctx.beginPath();
-      ctx.moveTo(-hw, -hh); ctx.lineTo(-hw,  hh);
-      ctx.moveTo( hw, -hh); ctx.lineTo( hw,  hh);
-      ctx.moveTo(-hw,    0); ctx.lineTo( hw,  0);
-      ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 2; ctx.stroke();
-      ctx.font = `700 ${Math.max(7, r*0.08)}px Orbitron`;
-      ctx.fillStyle = wa(PAL.safe, .75); ctx.textAlign = 'center';
-      ctx.fillText('PAD', 0, -(r*0.22 + 4));
-      ctx.restore();
-    }
-  }
-
-  ctx.restore();
-
-  const lbl = (st.isBounty?'★ ':'') + (st.isHome ? 'HOME STATION' : st.name);
-  ctx.font = '500 10px Orbitron'; ctx.fillStyle = wa(PAL.ink, .8); ctx.textAlign = 'center';
-  ctx.fillText(lbl, scx, scy - r - 14);
-
-  if (activeContract && activeContract.to === st.name) {
-    const pulse = .5 + .5*Math.sin(Date.now()*.005);
-    ctx.beginPath(); ctx.arc(scx, scy, r+20, 0, Math.PI*2);
-    ctx.strokeStyle = wa(PAL.accent, pulse*.6); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+    ctx.strokeStyle = wa(PAL.ink, .12); ctx.lineWidth = .8;
     ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
-    ctx.font = '9px Share Tech Mono'; ctx.fillStyle = wa(PAL.accent, .9); ctx.textAlign = 'center';
-    ctx.fillText('▼ DESTINATION', scx, scy - r - 26);
+
+    for (let i = 0; i < 4; i++) {
+      const a = (i/4)*Math.PI*2;
+      const c = Math.cos(a), s = Math.sin(a);
+      ctx.beginPath(); ctx.moveTo(c*r*.22, s*r*.22); ctx.lineTo(c*r*.78, s*r*.78);
+      ctx.strokeStyle = wa(PAL.ink, .65); ctx.lineWidth = 1.4; ctx.stroke();
+      const tx = Math.cos(a+Math.PI/2)*5, ty = Math.sin(a+Math.PI/2)*5;
+      const px = c*r*.78, py = s*r*.78;
+      ctx.beginPath(); ctx.moveTo(px+tx,py+ty); ctx.lineTo(px,py); ctx.lineTo(px-tx,py-ty);
+      ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(c*r*.4+tx*.4,s*r*.4+ty*.4); ctx.lineTo(c*r*.4-tx*.4,s*r*.4-ty*.4);
+      ctx.strokeStyle = wa(PAL.ink, .25); ctx.lineWidth = .7; ctx.stroke();
+    }
+
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i/6)*Math.PI*2 - Math.PI/6;
+      const p = r*.22;
+      if (i===0) ctx.moveTo(Math.cos(a)*p, Math.sin(a)*p);
+      else        ctx.lineTo(Math.cos(a)*p, Math.sin(a)*p);
+    }
+    ctx.closePath();
+    ctx.fillStyle = wa(PAL.ink, .06); ctx.fill();
+    ctx.strokeStyle = wa(PAL.ink, .85); ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, r*.07, 0, Math.PI*2);
+    ctx.fillStyle = wa(PAL.ink, .5); ctx.fill();
+
+    if (st.platforms) {
+      for (const p of st.platforms) {
+        ctx.save(); ctx.rotate(p.localAngle); ctx.translate(r*0.55, 0);
+        ctx.beginPath(); ctx.arc(0, 0, r*0.22, 0, Math.PI*2);
+        ctx.fillStyle = wa(PAL.safe, .06); ctx.fill();
+        ctx.strokeStyle = wa(PAL.safe, .7); ctx.lineWidth = 1.5;
+        ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+        const hw = r*0.09, hh = r*0.12;
+        ctx.beginPath();
+        ctx.moveTo(-hw, -hh); ctx.lineTo(-hw,  hh);
+        ctx.moveTo( hw, -hh); ctx.lineTo( hw,  hh);
+        ctx.moveTo(-hw,    0); ctx.lineTo( hw,  0);
+        ctx.strokeStyle = wa(PAL.safe, .9); ctx.lineWidth = 2; ctx.stroke();
+        ctx.font = `700 ${Math.max(7, r*0.08)}px Orbitron`;
+        ctx.fillStyle = wa(PAL.safe, .75); ctx.textAlign = 'center';
+        ctx.fillText('PAD', 0, -(r*0.22 + 4));
+        ctx.restore();
+      }
+    }
+    ctx.restore();
   }
 
-  if (dockingInfo.st === st) {
-    ctx.font = '10px Share Tech Mono'; ctx.textAlign = 'center';
-    if (dockingInfo.padD < CFG.DOCK_PAD_R) {
-      if (dockingInfo.shipSpd > CFG.DOCK_MAX_SPD) {
-        ctx.fillStyle = PAL.warn; ctx.fillText('SPEED TOO HIGH — BRAKE [S]', scx, scy + r + 18);
-      } else {
-        ctx.fillStyle = PAL.safe; ctx.fillText('◆ DOCKING PAD ALIGNED · [E] DOCK', scx, scy + r + 18);
-      }
-    } else if (dockingInfo.padD < r*2.5) {
-      ctx.fillStyle = wa(PAL.ink3, .8); ctx.fillText('ALIGN WITH PAD', scx, scy + r + 17);
-    }
-  }
+  _stationLabel(st, scx, scy);
+  _drawDockingHint(st, scx, scy);
 }
 
 let _safeCache = { cx:NaN, cy:NaN, result:false };
@@ -2643,9 +3091,52 @@ function drawMinimap() {
     if (bx<-20||bx>W+20||by<-20||by>H+20) return;
     const sz = isFS ? Math.max(4, st.radius*scale*1.5) : 4;
     const isContract = activeContract && activeContract.to===st.name;
-    mmx.fillStyle = isContract ? PAL.accent : PAL.ink;
-    mmx.fillRect(bx-sz/2, by-sz/2, sz, sz);
-    if (isFS && mmZoom>.6) { mmx.font='9px Share Tech Mono'; mmx.fillStyle=isContract?PAL.accent:wa(PAL.ink,.6); mmx.textAlign='center'; mmx.fillText(st.name,bx,by+sz+10); }
+    const blipCol = isContract ? PAL.accent : PAL.ink;
+    const type = st.stationType;
+
+    // Draw a type-specific minimap glyph
+    mmx.fillStyle = blipCol;
+    mmx.strokeStyle = blipCol;
+    mmx.lineWidth = isFS ? 1.5 : 1;
+
+    if (st.isHome || !type) {
+      // Home/legacy: square
+      mmx.fillRect(bx-sz/2, by-sz/2, sz, sz);
+    } else if (type === 'torus') {
+      // Circle (ring)
+      mmx.beginPath(); mmx.arc(bx,by,sz*.7,0,Math.PI*2); mmx.stroke();
+      mmx.beginPath(); mmx.arc(bx,by,sz*.2,0,Math.PI*2); mmx.fill();
+    } else if (type === 'citadel') {
+      // Hexagon
+      mmx.beginPath();
+      for (let hi=0; hi<6; hi++) {
+        const ha=(hi/6)*Math.PI*2-Math.PI/6;
+        const hx=bx+Math.cos(ha)*sz*.7, hy=by+Math.sin(ha)*sz*.7;
+        if (hi===0) mmx.moveTo(hx,hy); else mmx.lineTo(hx,hy);
+      }
+      mmx.closePath(); mmx.stroke();
+    } else if (type === 'outpost') {
+      // Plus / cross (asymmetric cluster)
+      mmx.beginPath();
+      mmx.moveTo(bx-sz*.75,by); mmx.lineTo(bx+sz*.75,by);
+      mmx.moveTo(bx,by-sz*.75); mmx.lineTo(bx,by+sz*.75);
+      mmx.stroke();
+      mmx.beginPath(); mmx.arc(bx,by,sz*.2,0,Math.PI*2); mmx.fill();
+    } else if (type === 'asteroid') {
+      // Diamond
+      mmx.beginPath();
+      mmx.moveTo(bx, by-sz*.8);
+      mmx.lineTo(bx+sz*.55, by);
+      mmx.lineTo(bx, by+sz*.8);
+      mmx.lineTo(bx-sz*.55, by);
+      mmx.closePath(); mmx.stroke();
+    }
+
+    if (isFS && mmZoom>.6) {
+      mmx.font='9px Share Tech Mono'; mmx.fillStyle=isContract?PAL.accent:wa(PAL.ink,.6); mmx.textAlign='center';
+      const typeSuf = type ? ' ['+type[0].toUpperCase()+']' : '';
+      mmx.fillText(st.name+typeSuf, bx, by+sz+10);
+    }
     if (isContract) { mmx.beginPath(); mmx.arc(bx,by,sz*2.5,0,Math.PI*2); mmx.strokeStyle=wa(PAL.accent,.5); mmx.lineWidth=1; mmx.stroke(); }
   };
   drawStBlip(homeStation);
@@ -3171,8 +3662,8 @@ document.getElementById('boot-start').addEventListener('click', () => {
     addLog('Milky Way sector · coords in light-seconds');
     addLog('WASD: thrust/brake · A/D: rotate · SPACE: laser');
     addLog('1: Maneuvering Mode · 2: Cosmic Speed · J: Hyperdrive');
-    addLog('E: dock (align pad, low speed) · Q: shield');
-    addLog('Hyperdrive fast-travels to stations · costs 2/3 fuel');
+    addLog('E: dock · each station type has unique docking rules');
+    addLog('TORUS: slow to hub · CITADEL: mag pads · OUTPOST: arm port · ASTEROID: fly inside');
     setTimeout(() => { spawnEnemy(); addLog('⚠ Pirate detected'); }, 9000);
     lastTime = performance.now();
     requestAnimationFrame(loop);
