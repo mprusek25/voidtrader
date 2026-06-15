@@ -1124,7 +1124,7 @@ const SHIP_HULLS = [
     weaponDmg:CFG.LASER_DMG_BASE, steerMult:1.0, cargoMax:CFG.CARGO_MAX,
   },
   {
-    id:'interceptor', name:'INTERCEPTOR', cost:18000,
+    id:'interceptor', name:'INTERCEPTOR', cost:6000,
     desc:'Light frame built for speed and turn rate.',
     weaponDmg:CFG.LASER_DMG_BASE+5, steerMult:1.35, cargoMax:CFG.CARGO_MAX*0.7,
   },
@@ -3023,15 +3023,18 @@ function fireLaser() {
   const beams = [];
 
   for (const bd of wcfg.beams) {
-    // Wing-offset beam origins (perpendicular to ship angle)
-    const perp = ship.angle + Math.PI/2;
-    const ox = Math.cos(perp) * bd.ox + Math.sin(ship.angle) * (-bd.oy);
-    const oy = Math.sin(perp) * bd.ox - Math.cos(ship.angle) * (-bd.oy);
+    // Rotate the local (ox, oy) offset by the ship's angle into world space.
+    // bd.ox = lateral offset (+ = right wing, - = left wing)
+    // bd.oy = longitudinal offset (+ = aft, - = forward)
+    const sinA = Math.sin(ship.angle), cosA = Math.cos(ship.angle);
+    // Ship forward = (sinA, -cosA), ship right = (cosA, sinA)
+    const worldOX = cosA * bd.ox + sinA * (-bd.oy);
+    const worldOY = sinA * bd.ox - cosA * (-bd.oy);
     const fireAngle = ship.angle + bd.spread;
-    const bx1 = ship.x + ox + Math.sin(fireAngle)*20;
-    const by1 = ship.y + oy - Math.cos(fireAngle)*20;
-    const bx2 = ship.x + ox + Math.sin(fireAngle)*(20 + laserLen);
-    const by2 = ship.y + oy - Math.cos(fireAngle)*(20 + laserLen);
+    const bx1 = ship.x + worldOX + Math.sin(fireAngle)*20;
+    const by1 = ship.y + worldOY - Math.cos(fireAngle)*20;
+    const bx2 = ship.x + worldOX + Math.sin(fireAngle)*(20 + laserLen);
+    const by2 = ship.y + worldOY - Math.cos(fireAngle)*(20 + laserLen);
     beams.push({ x1:bx1, y1:by1, x2:bx2, y2:by2 });
 
     // Damage checks per beam
