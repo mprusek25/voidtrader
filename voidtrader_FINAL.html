@@ -956,6 +956,54 @@ const wy = y => canvas.height/2 + (y - cam.y);
 
 let galaxyCanvas = null;
 
+// ── CONSTELLATION CHARTS ─────────────────────────────────────────────────
+// Simplified, recognizable star patterns. Coordinates are abstract units;
+// each instance gets randomized scale/rotation/position/color when placed.
+// `bright` marks the anchor star (gets the designation ring + label).
+const CONSTELLATIONS = [
+  { name:'URSA DRIFT', catalog:'NGC-7421', bright:0, labelSide:1,
+    points:[[0,0],[0.2,1.4],[1.7,1.7],[1.6,0.4],[2.9,0.0],[4.0,-0.6],[5.0,-1.7]],
+    edges:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]] },
+  { name:'ORION ARC', catalog:'HD-3301', bright:0, labelSide:-1,
+    points:[[0,0],[2.3,0.15],[0.7,1.6],[1.15,1.75],[1.6,1.9],[0.3,3.3],[2.0,3.15]],
+    edges:[[0,2],[1,4],[2,3],[3,4],[2,5],[4,6]] },
+  { name:'CASSIOPEIA', catalog:'IC-998', bright:2, labelSide:1,
+    points:[[0,1.1],[1,0],[2,0.9],[3,0.05],[4,1.0]],
+    edges:[[0,1],[1,2],[2,3],[3,4]] },
+  { name:'CRUX VECTOR', catalog:'NGC-4103', bright:0, labelSide:1,
+    points:[[0,-1.6],[0.1,1.7],[-1.1,0.1],[1.3,0.25]],
+    edges:[[0,1],[2,3]] },
+  { name:'CYGNUS NODE', catalog:'HR-7001', bright:0, labelSide:-1,
+    points:[[0,0],[0,-2.2],[0.1,2.4],[1.9,0.3],[-1.8,-0.15]],
+    edges:[[0,1],[0,2],[0,3],[0,4]] },
+  { name:'SCORPII TAIL', catalog:'NGC-6231', bright:3, labelSide:1,
+    points:[[0,0],[1.0,0.25],[2.0,0.7],[2.7,1.6],[2.5,2.8],[1.6,3.3]],
+    edges:[[0,1],[1,2],[2,3],[3,4],[4,5]] },
+  { name:'LYRA RING', catalog:'HD-1726', bright:0, labelSide:-1,
+    points:[[0,0],[0.9,1.05],[0.65,2.3],[-0.55,2.1],[-0.7,0.95]],
+    edges:[[0,1],[1,2],[2,3],[3,4],[4,0]] },
+  { name:'DRACO ARC', catalog:'NGC-5949', bright:2, labelSide:1,
+    points:[[0,0],[1.3,0.5],[2.1,1.7],[1.6,3.0],[0.2,3.4],[-1.0,2.4]],
+    edges:[[0,1],[1,2],[2,3],[3,4],[4,5]] },
+];
+
+// Small uppercase chart label with manual letter-spacing (canvas has no
+// reliable cross-browser letter-spacing for fillText), centered on cx.
+function drawChartLabel(gctx, text, cx, y, size, color) {
+  gctx.font = `${size}px Orbitron, monospace`;
+  gctx.textBaseline = 'middle';
+  const spacing = size * 0.5;
+  const chars = text.split('');
+  const widths = chars.map(ch => gctx.measureText(ch).width);
+  const totalW = widths.reduce((a,w)=>a+w,0) + spacing*(chars.length-1);
+  let x = cx - totalW/2;
+  gctx.fillStyle = color;
+  for (let i = 0; i < chars.length; i++) {
+    gctx.fillText(chars[i], x, y);
+    x += widths[i] + spacing;
+  }
+}
+
 function buildGalaxy() {
   const rng = makePRNG(SEED ^ 0xDEAD);
   const isDark = currentTheme === 'dark';
@@ -1168,6 +1216,85 @@ function buildGalaxy() {
     gx.restore();
   }
 
+  // ── STAR CONSTELLATIONS ────────────────────────────────────────────────
+  // Charted patterns: bright nodes linked by faint nav-lines in selected
+  // accent colors, each tagged with a name + catalog id for a star-chart feel.
+  const constColors = isDark
+    ? [ [120,200,255],[190,150,255],[255,200,120],[255,140,170],[140,255,200],[235,235,255] ]
+    : [ [40,80,150], [110,60,150], [150,90,20],  [150,50,80],  [30,110,90],  [50,50,65]    ];
+
+  for (const pat of CONSTELLATIONS) {
+    const instances = 1 + (rng() < 0.4 ? 1 : 0);
+    for (let inst = 0; inst < instances; inst++) {
+      const scale = 26 + rng()*34;
+      const rot   = rng()*Math.PI*2;
+      const cx    = 160 + rng()*(GW-320);
+      const cy    = 160 + rng()*(GH-320);
+      const [cr,cg,cb] = constColors[Math.floor(rng()*constColors.length)];
+      const cosA = Math.cos(rot), sinA = Math.sin(rot);
+
+      const wpts = pat.points.map(([px,py]) => {
+        const sx = px*scale, sy = py*scale;
+        return [ cx + (sx*cosA - sy*sinA) + (rng()-.5)*4, cy + (sx*sinA + sy*cosA) + (rng()-.5)*4 ];
+      });
+
+      // connecting lines — faint, glowing, in the constellation's chosen color
+      const lineA = isDark ? 0.22 + rng()*0.10 : 0.16 + rng()*0.08;
+      gx.lineWidth   = isDark ? 0.7 : 0.6;
+      gx.strokeStyle = `rgba(${cr},${cg},${cb},${lineA})`;
+      gx.shadowColor = `rgba(${cr},${cg},${cb},${lineA*1.4})`;
+      gx.shadowBlur  = isDark ? 3 : 1.5;
+      for (const [a,b] of pat.edges) {
+        gx.beginPath();
+        gx.moveTo(wpts[a][0], wpts[a][1]);
+        gx.lineTo(wpts[b][0], wpts[b][1]);
+        gx.stroke();
+      }
+      gx.shadowBlur = 0;
+
+      // star nodes with soft halos, anchor star drawn bigger + sparkled
+      for (let pIdx = 0; pIdx < wpts.length; pIdx++) {
+        const [sx, sy] = wpts[pIdx];
+        const isBright = pIdx === pat.bright;
+        const r     = isBright ? (isDark?2.6:2.0) : (isDark?1.4:1.0) + rng()*0.6;
+        const haloR = r * (isBright ? 6 : 4);
+        const haloA = isDark ? (isBright?0.35:0.18) : (isBright?0.22:0.10);
+        const hg = gx.createRadialGradient(sx,sy,0,sx,sy,haloR);
+        hg.addColorStop(0, `rgba(${cr},${cg},${cb},${haloA})`);
+        hg.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+        gx.fillStyle = hg;
+        gx.beginPath(); gx.arc(sx,sy,haloR,0,Math.PI*2); gx.fill();
+
+        gx.beginPath(); gx.arc(sx,sy,r,0,Math.PI*2);
+        gx.fillStyle = isDark
+          ? `rgba(255,255,255,${0.85+rng()*0.15})`
+          : `rgba(${Math.max(cr-30,0)},${Math.max(cg-30,0)},${Math.max(cb-30,0)},${0.75+rng()*0.2})`;
+        gx.fill();
+
+        if (isBright) {
+          const sl = r*4.2;
+          gx.strokeStyle = `rgba(${cr},${cg},${cb},${isDark?0.4:0.28})`;
+          gx.lineWidth = 0.5;
+          gx.beginPath(); gx.moveTo(sx-sl,sy); gx.lineTo(sx+sl,sy); gx.stroke();
+          gx.beginPath(); gx.moveTo(sx,sy-sl); gx.lineTo(sx,sy+sl); gx.stroke();
+        }
+      }
+
+      // designation ring + name/catalog label on the anchor star — like a
+      // charted nav-point on a star map
+      const [ax,ay] = wpts[pat.bright];
+      gx.strokeStyle = `rgba(${cr},${cg},${cb},${isDark?0.30:0.20})`;
+      gx.lineWidth = 0.6;
+      gx.setLineDash([2,3]);
+      gx.beginPath(); gx.arc(ax,ay,(isDark?9:8)+rng()*3,0,Math.PI*2); gx.stroke();
+      gx.setLineDash([]);
+
+      const labelY = ay + (pat.labelSide * (18+rng()*8));
+      drawChartLabel(gx, pat.name,    ax, labelY,                9,   `rgba(${cr},${cg},${cb},${isDark?0.50:0.40})`);
+      drawChartLabel(gx, pat.catalog, ax, labelY + pat.labelSide*11, 6.5, `rgba(${cr},${cg},${cb},${isDark?0.30:0.22})`);
+    }
+  }
+
   // ── PLANETY ───────────────────────────────────────────────────────────────
   const planetDefs = [
     // [cx_frac, cy_frac, radius, colorDark, colorLight, ringAngle, hasRing, moonCount]
@@ -1329,6 +1456,7 @@ const starLayers = [0.04, 0.12, 0.35, 0.65].map((par, li) => {
     size:  li===3 ? rng()*1.4+0.5 : rng()*(li===2?1.0:0.6)+0.15,
     alpha: rng()*(li===3?.7:.5)+.1,
     par,
+    tw: rng()*1.6+0.4, twPhase: rng()*Math.PI*2,
     // col gets updated when theme changes via rebuildStarColors()
     col: rng()<.15 ? '35,28,55' : rng()<.08 ? '55,40,25' : '20,20,25',
   }));
@@ -1346,10 +1474,11 @@ function drawStars() {
   for (const layer of starLayers) for (const s of layer) {
     const ox = ((s.nx*canvas.width  - cam.x*s.par) % canvas.width  + canvas.width)  % canvas.width;
     const oy = ((s.ny*canvas.height - cam.y*s.par) % canvas.height + canvas.height) % canvas.height;
+    const twk = 0.82 + 0.18*Math.sin(elapsedTime*s.tw + s.twPhase);
     ctx.beginPath(); ctx.arc(ox, oy, s.size, 0, Math.PI*2);
     // Dark: bright stars on dark; Light: subtle dark dots on warm bg
     const alphaScale = isDark ? 1.6 : 0.7;
-    ctx.fillStyle = `rgba(${s.col},${Math.min(s.alpha*alphaScale, 1)})`; ctx.fill();
+    ctx.fillStyle = `rgba(${s.col},${Math.min(s.alpha*alphaScale*twk, 1)})`; ctx.fill();
   }
 }
 
@@ -1364,6 +1493,53 @@ function drawGrid() {
   ctx.strokeStyle = wa(PAL.ink, .015);
   for (let x=ox2; x<canvas.width;  x+=G2) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
   for (let y=oy2; y<canvas.height; y+=G2) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+}
+
+
+// ── ## COMETS / SHOOTING STARS ─────────────────────────────────────────────
+// Purely ambient — occasional streaks across the void for extra life.
+let comets = [];
+let cometTimer = 3 + Math.random()*5;
+
+function spawnComet() {
+  const W = canvas.width, H = canvas.height;
+  const edge = Math.floor(Math.random()*4);
+  let x, y, ang;
+  if (edge === 0)      { x = -40;            y = Math.random()*H*0.6; ang = Math.PI*0.16 + Math.random()*0.22; }
+  else if (edge === 1) { x = W+40;           y = Math.random()*H*0.6; ang = Math.PI*0.82 + Math.random()*0.22; }
+  else if (edge === 2) { x = Math.random()*W*0.7; y = -40;            ang = Math.PI*0.30 + Math.random()*0.30; }
+  else                 { x = Math.random()*W*0.6+W*0.2; y = -40;      ang = Math.PI*0.62 + Math.random()*0.22; }
+  const spd = 380 + Math.random()*340;
+  comets.push({ x, y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+                len: 60+Math.random()*90, life: 1.4+Math.random()*0.8, age: 0 });
+}
+
+function updateComets(dt) {
+  cometTimer -= dt;
+  if (cometTimer <= 0) { spawnComet(); cometTimer = 6 + Math.random()*10; }
+  for (let i = comets.length-1; i >= 0; i--) {
+    const c = comets[i];
+    c.x += c.vx*dt; c.y += c.vy*dt; c.age += dt;
+    if (c.age > c.life || c.x < -200 || c.x > canvas.width+200 || c.y > canvas.height+200) comets.splice(i,1);
+  }
+}
+
+function drawComets() {
+  const isDark = currentTheme === 'dark';
+  const col = isDark ? '255,250,235' : '40,32,20';
+  for (const c of comets) {
+    const t = c.age / c.life;
+    const fade = t < 0.15 ? t/0.15 : 1 - (t-0.15)/0.85;
+    const ang = Math.atan2(c.vy, c.vx);
+    const tx = c.x - Math.cos(ang)*c.len, ty = c.y - Math.sin(ang)*c.len;
+    const grad = ctx.createLinearGradient(c.x, c.y, tx, ty);
+    grad.addColorStop(0, `rgba(${col},${0.9*fade})`);
+    grad.addColorStop(1, `rgba(${col},0)`);
+    ctx.strokeStyle = grad; ctx.lineWidth = isDark ? 1.6 : 1.2;
+    ctx.beginPath(); ctx.moveTo(c.x,c.y); ctx.lineTo(tx,ty); ctx.stroke();
+    ctx.beginPath(); ctx.arc(c.x,c.y, isDark?1.6:1.2, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${col},${fade})`; ctx.fill();
+  }
 }
 
 
@@ -4335,17 +4511,19 @@ const GamepadInput = {
 // ── ## MAIN LOOP ──────────────────────────────────────────────────────────────
 
 let lastTime = 0;
+let elapsedTime = 0;
 
 function loop(ts) {
   const dt = Math.min((ts - lastTime) / 1000, .05);
   lastTime = ts;
-  
+  elapsedTime += dt;
+
   GamepadInput.update(dt);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = PAL.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  drawGalaxy(); drawStars(); drawGrid();
+  drawGalaxy(); drawStars(); drawComets(); drawGrid();
 
   if (!isPaused) updateDockingInfo();
 
@@ -4363,7 +4541,7 @@ function loop(ts) {
     updateShip(dt); updateEnemies(dt); updateMeteors(dt);
     updateBlackHoles(dt); updateSwarms(dt); updateStranded(dt);
     updateBoss(dt); updateBossProj(dt); tickShield(dt); regenStations(dt);
-    updateWormhole(dt);
+    updateWormhole(dt); updateComets(dt);
 
     for (let i = drops.length-1; i >= 0; i--) {
       drops[i].ttl -= dt;
